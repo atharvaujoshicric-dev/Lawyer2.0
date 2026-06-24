@@ -1,0 +1,61 @@
+/* ── Hierarchy Role Badges ──────────────────────────────────── */
+.badge-senior-advocate{background:#0f1e3c;color:#c9a84c;border:1px solid rgba(201,168,76,.3);}
+.badge-junior-advocate{background:#1e3a6e;color:#e4c470;border:1px solid rgba(228,196,112,.2);}
+.badge-senior-assistant{background:#2d3748;color:#e2e8f0;border:1px solid rgba(226,232,240,.2);}
+.badge-junior-assistant{background:#f7fafc;color:#4a5568;border:1px solid #e2e8f0;}
+.badge-archived{background:#fff5f5;color:#c53030;border:1px solid #fed7d7;}
+
+/* ── Hierarchy permissions grid ────────────────────────────── */
+.perm-matrix{width:100%;border-collapse:collapse;font-size:13px;}
+.perm-matrix th{background:var(--bg);padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);border-bottom:2px solid var(--border);white-space:nowrap;}
+.perm-matrix th:first-child{text-align:left;}
+.perm-matrix td{padding:10px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+.perm-matrix td:first-child{font-size:13px;color:var(--text-primary);}
+.perm-matrix tr:hover td{background:#f7f8ff;}
+.perm-toggle{width:36px;height:20px;border-radius:10px;background:var(--border);position:relative;cursor:pointer;border:none;transition:background .2s;display:block;margin:auto;}
+.perm-toggle.on{background:var(--navy);}
+.perm-toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.perm-toggle.on::after{transform:translateX(16px);}
+.perm-toggle:disabled{opacity:.4;cursor:not-allowed;}
+.role-tier-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+
+/* ── Chatbot ─────────────────────────────────────────────── */
+.chatbot-fab{position:fixed;bottom:28px;right:28px;width:54px;height:54px;border-radius:50%;background:var(--navy);border:2px solid var(--gold);color:var(--gold);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:grab;z-index:8888;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s;user-select:none;}
+.chatbot-fab:hover{transform:scale(1.07);box-shadow:0 6px 20px rgba(0,0,0,.32);}
+.chatbot-fab:active{cursor:grabbing;}
+.chatbot-fab .chatbot-badge{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 3px;}
+.chatbot-fab .chatbot-badge.show{display:flex;}
+.chatbot-panel{position:fixed;bottom:90px;right:28px;width:340px;max-height:520px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;z-index:8889;overflow:hidden;animation:chat-slide-up .2s ease;}
+.chatbot-panel.open{display:flex;}
+@keyframes chat-slide-up{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.chatbot-panel-header{background:var(--navy);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.chatbot-panel-title{flex:1;font-size:14px;font-weight:600;color:#fff;}
+.chatbot-panel-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:16px;cursor:pointer;padding:2px 5px;border-radius:4px;}
+.chatbot-panel-close:hover{color:#fff;background:rgba(255,255,255,.1);}
+.chatbot-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chatbot-msg{max-width:88%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5;}
+.chatbot-msg.bot{background:var(--bg);color:var(--text-primary);border-bottom-left-radius:3px;align-self:flex-start;}
+.chatbot-msg.user{background:var(--navy);color:#fff;border-bottom-right-radius:3px;align-self:flex-end;}
+.chatbot-suggestions{padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--border-light);flex-shrink:0;}
+.chatbot-chip{padding:5px 11px;border-radius:20px;border:1px solid var(--navy-mid);color:var(--navy);font-size:12px;cursor:pointer;background:var(--bg);transition:all .12s;white-space:nowrap;}
+.chatbot-chip:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+.chatbot-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
+.chatbot-input-row input{flex:1;border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:13px;outline:none;}
+.chatbot-input-row input:focus{border-color:var(--navy-mid);}
+.chatbot-send{width:34px;height:34px;border-radius:50%;border:none;background:var(--gold);color:var(--navy);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* ── Forgot password link ─────────────────────────────────── */
+.auth-link-row{text-align:center;margin-top:12px;font-size:12.5px;color:var(--text-muted);}
+.auth-link-row a{color:var(--navy-mid);font-weight:500;cursor:pointer;text-decoration:underline;}
+
+/* ── Archived user row ────────────────────────────────────── */
+.user-list-item.archived{opacity:.65;border-color:#fed7d7;}
+
+/* ── Hierarchy page ──────────────────────────────────────── */
+.hierarchy-tree{display:flex;flex-direction:column;gap:0;margin:20px 0;}
+.hierarchy-level{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--bg-card);border:1px solid var(--border);margin-bottom:2px;border-radius:var(--radius);}
+.hierarchy-level:first-child{border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);}
+.hierarchy-level:last-child{border-bottom-left-radius:var(--radius);border-bottom-right-radius:var(--radius);}
+.hierarchy-rank{font-size:20px;font-weight:700;color:var(--gold);width:32px;text-align:center;flex-shrink:0;}
+.hierarchy-arrow{color:var(--text-muted);font-size:13px;margin:0 4px;}
+.hierarchy-members{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;}
