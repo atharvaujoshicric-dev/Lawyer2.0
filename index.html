@@ -5782,14 +5782,13 @@ function applyFinancesVisibility(){
     el.style.display = (isAdmin()||canViewFinances()) ? '' : 'none';
   });
 }
-</script>
+
 
 // ── UI aliases for HTML onclick handlers ──────────────────────────────────
 // These thin wrappers bridge HTML onclicks to the underlying functions.
-
-function forgotPassword()       { doForgotPassword(); }
-function changePassword()       { doChangePassword(); }
-function setNewPasswordFromReset(){ doChangePassword(); }
+  function forgotPassword()       { doForgotPassword(); }
+  function changePassword()       { doChangePassword(); }
+  function setNewPasswordFromReset(){ doChangePassword(); }
 
 function toggleChatbotSetting(btn){
   const enabled = btn.classList.toggle('active');
@@ -5847,6 +5846,7 @@ async function leaveGroup(){
   renderChatContacts();
   showToast('You left the group.','info');
 }
+</script>
 <script>
 // ════════════════════════════════════════════
 //  LEXDESK ASSISTANT — comprehensive preset Q&A
