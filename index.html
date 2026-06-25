@@ -130,8 +130,101 @@ button,input,select,textarea{font-family:var(--font)}
 .card-header{padding:16px 20px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .card-title{font-size:15px;font-weight:600;color:var(--text-primary)}
 .card-body{padding:20px}
-</style>
-<style>
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT MODE — Apple Liquid Glass on white/silver
+   Applied via  html[data-theme="light"]
+   ═══════════════════════════════════════════════════════ */
+html[data-theme="light"]{
+  --glass-bg:rgba(255,255,255,0.55);
+  --glass-bg-mid:rgba(255,255,255,0.70);
+  --glass-bg-strong:rgba(255,255,255,0.85);
+  --glass-border:rgba(0,0,0,0.08);
+  --glass-border-strong:rgba(0,0,0,0.13);
+  --bg:transparent;
+  --bg-card:rgba(255,255,255,0.60);
+  --border:rgba(0,0,0,0.09);
+  --border-light:rgba(0,0,0,0.05);
+  --text-primary:#0f172a;
+  --text-secondary:#374151;
+  --text-muted:#6b7280;
+  --success:#16a34a;--success-bg:rgba(22,163,74,.10);
+  --danger:#dc2626;--danger-bg:rgba(220,38,38,.10);
+  --warning:#d97706;--warning-bg:rgba(217,119,6,.10);
+  --info:#2563eb;--info-bg:rgba(37,99,235,.10);
+  --shadow:0 4px 20px rgba(0,0,0,.10);
+  --shadow-md:0 8px 32px rgba(0,0,0,.14);
+  --shadow-glow:0 0 32px rgba(201,168,76,.18);
+}
+html[data-theme="light"] body{
+  background:
+    radial-gradient(ellipse at 20% 10%,rgba(201,168,76,.14) 0%,transparent 45%),
+    radial-gradient(ellipse at 80% 80%,rgba(37,99,235,.08) 0%,transparent 50%),
+    linear-gradient(160deg,#f0f4ff 0%,#e8edf8 40%,#f5f0e8 100%);
+}
+html[data-theme="light"] #sidebar{background:rgba(255,255,255,0.72);border-right-color:rgba(0,0,0,.09);box-shadow:4px 0 30px rgba(0,0,0,.08);}
+html[data-theme="light"] .sidebar-logo{border-bottom-color:rgba(0,0,0,.07);}
+html[data-theme="light"] .logo-sub{color:rgba(0,0,0,.32);}
+html[data-theme="light"] .nav-section-label{color:rgba(0,0,0,.32);}
+html[data-theme="light"] .nav-item{color:rgba(0,0,0,.55);}
+html[data-theme="light"] .nav-item:hover{background:rgba(0,0,0,.05);color:rgba(0,0,0,.85);}
+html[data-theme="light"] .nav-item.active{background:linear-gradient(90deg,rgba(201,168,76,.18),rgba(201,168,76,.06));color:#92680a;}
+html[data-theme="light"] .nav-badge{background:var(--danger);}
+html[data-theme="light"] .sidebar-footer{border-top-color:rgba(0,0,0,.07);}
+html[data-theme="light"] .user-name{color:rgba(0,0,0,.80);}
+html[data-theme="light"] .user-role{color:rgba(0,0,0,.38);}
+html[data-theme="light"] .user-avatar{background:rgba(30,58,110,.12);}
+html[data-theme="light"] .sidebar-logout{color:#dc2626;border-color:rgba(220,38,38,.2);background:rgba(220,38,38,.05);}
+html[data-theme="light"] #sidebar-toggle{background:rgba(255,255,255,.90);border-color:rgba(0,0,0,.12);color:var(--navy);}
+html[data-theme="light"] #topbar{background:rgba(255,255,255,0.68);border-bottom-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .sync-badge{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .card{background:rgba(255,255,255,0.62);border-color:rgba(0,0,0,.09);}
+html[data-theme="light"] .card-header{border-bottom-color:rgba(0,0,0,.07);}
+html[data-theme="light"] .btn-outline{background:rgba(255,255,255,.70);border-color:rgba(0,0,0,.14);color:var(--text-secondary);}
+html[data-theme="light"] .btn-outline:hover{background:rgba(255,255,255,.90);}
+html[data-theme="light"] .form-control{background:rgba(255,255,255,.75);border-color:rgba(0,0,0,.14);}
+html[data-theme="light"] .form-control:disabled{background:rgba(0,0,0,.04);}
+html[data-theme="light"] .search-input{background:rgba(255,255,255,.72);border-color:rgba(0,0,0,.12);}
+html[data-theme="light"] .modal-backdrop{background:rgba(0,0,0,.35);}
+html[data-theme="light"] .modal{background:rgba(255,255,255,0.90);border-color:rgba(0,0,0,.10);box-shadow:0 20px 60px rgba(0,0,0,.18);}
+html[data-theme="light"] .modal-header{border-bottom-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .modal-footer{border-top-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .modal-close:hover{background:rgba(0,0,0,.06);}
+html[data-theme="light"] .tabs{border-bottom-color:rgba(0,0,0,.10);}
+html[data-theme="light"] .data-table thead th{background:rgba(0,0,0,.03);border-bottom-color:rgba(0,0,0,.09);}
+html[data-theme="light"] .data-table tbody tr:hover{background:rgba(0,0,0,.025);}
+html[data-theme="light"] .data-table tbody td{border-bottom-color:rgba(0,0,0,.06);}
+html[data-theme="light"] .chat-layout{border-color:rgba(0,0,0,.09);}
+html[data-theme="light"] .chat-sidebar{background:rgba(255,255,255,.60);border-right-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .chat-contact:hover{background:rgba(0,0,0,.04);}
+html[data-theme="light"] .chat-contact.active{background:#eef2ff;border-left-color:var(--navy);}
+html[data-theme="light"] .chat-msg.theirs{background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.08);}
+html[data-theme="light"] .kanban-col{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .task-card{background:rgba(255,255,255,.80);border-color:rgba(0,0,0,.09);}
+html[data-theme="light"] .login-card{background:rgba(255,255,255,0.82);border-color:rgba(0,0,0,.10);}
+html[data-theme="light"] .settings-section{background:rgba(255,255,255,.60);border-color:rgba(0,0,0,.09);}
+html[data-theme="light"] .settings-section-head{border-bottom-color:rgba(0,0,0,.07);}
+html[data-theme="light"] .settings-row{border-bottom-color:rgba(0,0,0,.06);}
+html[data-theme="light"] .stat-card{background:rgba(255,255,255,.68);}
+html[data-theme="light"] .file-item{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08);}
+html[data-theme="light"] .toast{background:rgba(255,255,255,.94);color:var(--text-primary);box-shadow:0 8px 32px rgba(0,0,0,.14);}
+html[data-theme="light"] #chatbot-panel{background:rgba(255,255,255,.90);border-color:rgba(0,0,0,.10);}
+html[data-theme="light"] .section-divider{color:#92680a;border-bottom-color:rgba(201,168,76,.3);}
+html[data-theme="light"] #portal-screen{background:linear-gradient(160deg,#f0f4ff,#e8edf8);}
+html[data-theme="light"] #sidebar{scrollbar-color:rgba(0,0,0,.12) transparent;}
+html[data-theme="light"] #sidebar::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);}
+html[data-theme="light"] .user-list-item{border-bottom-color:rgba(0,0,0,.06);}
+html[data-theme="light"] .planner-note-item{border-bottom-color:rgba(0,0,0,.06);}
+html[data-theme="light"] .fin-client-row:hover{background:rgba(0,0,0,.03);}
+html[data-theme="light"] .fin-client-row.expanded{background:rgba(0,0,0,.04);}
+html[data-theme="light"] .fin-ledger{background:rgba(0,0,0,.03);}
+html[data-theme="light"] .cal-cell:hover{background:rgba(0,0,0,.04);}
+html[data-theme="light"] .cal-cell.today{background:rgba(201,168,76,.12);}
+html[data-theme="light"] .cal-cell.selected{background:#eef2ff;outline-color:var(--navy);}
+html[data-theme="light"] .cal-detail-panel{background:rgba(255,255,255,.72);}
+html[data-theme="light"] .chat-unread-badge{border-color:rgba(255,255,255,.90);}
+
+</style><style>
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px}
 .stat-card{background:var(--glass-bg-mid);backdrop-filter:var(--glass-blur-sm);-webkit-backdrop-filter:var(--glass-blur-sm);border:1px solid var(--glass-border-strong);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
@@ -993,6 +1086,14 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
               <div class="settings-row">
                 <div class="settings-row-text"><div class="settings-row-label">Export to Excel</div><div class="settings-row-desc">Clients, Documents, Users & Tasks in one workbook</div></div>
                 <button class="btn btn-outline btn-sm" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Export</button>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-text"><div class="settings-row-label">Appearance</div><div class="settings-row-desc">Choose between Dark Glass (default) or Light Glass mode</div></div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:12px;color:var(--text-muted);">☀ Light</span>
+                  <button class="toggle" id="theme-toggle" onclick="toggleTheme(this)" style="flex-shrink:0;"></button>
+                  <span style="font-size:12px;color:var(--text-muted);">🌑 Dark</span>
+                </div>
               </div>
               <div class="settings-row">
                 <div class="settings-row-text"><div class="settings-row-label">LexDesk Assistant (Chatbot)</div><div class="settings-row-desc">Floating help widget with preset Q&amp;A. Clears history every 2 days.</div></div>
@@ -3472,6 +3573,12 @@ function loadSettingsUI(){
   document.getElementById('s-onedrive-client-id').value=localStorage.getItem('ld_onedrive_client_id')||'';
   updateOneDriveStatusUI();
   loadInvoiceSettingsUI();  // populate invoice settings fields if data already loaded
+  // Initialize theme toggle
+  const themeToggle = document.getElementById('theme-toggle');
+  if(themeToggle){
+    const isDark = getTheme() !== 'light';
+    themeToggle.classList.toggle('on', isDark);
+  }
   // Initialize chatbot toggle to reflect actual current state
   const botToggle = document.getElementById('chatbot-toggle');
   if(botToggle){
@@ -5978,6 +6085,32 @@ async function autoDeleteOldTasks(){
   if(data) S.tasks=data;
 }
 
+// ── Theme management (dark / light Liquid Glass) ──────────────────────────
+function getTheme(){ return localStorage.getItem('ld_theme')||'dark'; }
+
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme==='light'?'light':'');
+  // Update toggle button state
+  const toggle = document.getElementById('theme-toggle');
+  if(toggle){
+    // Toggle is ON = dark mode; OFF = light mode
+    toggle.classList.toggle('on', theme==='dark');
+  }
+  localStorage.setItem('ld_theme', theme);
+}
+
+function toggleTheme(btn){
+  // btn.on = dark, btn.off = light (inverted so .on = dark default)
+  const nowDark = !btn.classList.contains('on');
+  btn.classList.toggle('on', nowDark);
+  applyTheme(nowDark ? 'dark' : 'light');
+  showToast(nowDark ? '🌑 Dark Glass mode' : '☀ Light Glass mode', 'info');
+}
+
+function initTheme(){
+  applyTheme(getTheme());
+}
+
 // ── Apply finances visibility (admin-only) ────────────────────────────────
 function applyFinancesVisibility(){
   document.querySelectorAll('.nav-finances').forEach(el=>{
@@ -6617,6 +6750,7 @@ document.addEventListener('click',e=>{
 //  BOOT
 // ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',async ()=>{
+  initTheme();  // apply saved theme before any rendering
   // Check for client portal mode first (before normal auth)
   const portalToken = checkPortalMode();
   if(portalToken){
