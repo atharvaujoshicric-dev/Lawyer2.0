@@ -12,63 +12,128 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
+  /* Core palette — deep navy/indigo base */
   --navy:#0f1e3c;--navy-light:#162850;--navy-mid:#1e3a6e;
-  --gold:#c9a84c;--gold-light:#e4c470;--gold-pale:#f7edd0;
-  --bg:#f7f8fc;--bg-card:#ffffff;
-  --border:#e2e8f0;--border-light:#edf2f7;
-  --text-primary:#1a202c;--text-secondary:#4a5568;--text-muted:#a0aec0;
-  --success:#276749;--success-bg:#c6f6d5;
-  --danger:#c53030;--danger-bg:#fff5f5;
-  --warning:#92400e;--warning-bg:#fffbeb;
-  --info:#2c5282;--info-bg:#ebf8ff;
-  --sidebar-w:260px;--radius:10px;--radius-sm:6px;
-  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
-  --shadow-md:0 4px 12px rgba(0,0,0,.1);
+  --gold:#c9a84c;--gold-light:#e4c470;--gold-pale:rgba(201,168,76,.12);
+  /* Glass system */
+  --glass-bg:rgba(255,255,255,0.06);
+  --glass-bg-mid:rgba(255,255,255,0.10);
+  --glass-bg-strong:rgba(255,255,255,0.14);
+  --glass-border:rgba(255,255,255,0.14);
+  --glass-border-strong:rgba(255,255,255,0.22);
+  --glass-blur:blur(20px);
+  --glass-blur-sm:blur(12px);
+  /* Override legacy vars so old CSS still works */
+  --bg:transparent;
+  --bg-card:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.13);
+  --border-light:rgba(255,255,255,0.08);
+  /* Text — bright on dark glass */
+  --text-primary:#f0f4ff;--text-secondary:#b8c4dc;--text-muted:#7a8aaa;
+  /* Semantic colours adapted for dark */
+  --success:#4ade80;--success-bg:rgba(74,222,128,.12);
+  --danger:#f87171;--danger-bg:rgba(248,113,113,.12);
+  --warning:#fbbf24;--warning-bg:rgba(251,191,36,.12);
+  --info:#60a5fa;--info-bg:rgba(96,165,250,.12);
+  --sidebar-w:260px;--radius:12px;--radius-sm:8px;
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+  --shadow-md:0 8px 32px rgba(0,0,0,.45);
+  --shadow-glow:0 0 32px rgba(201,168,76,.12);
   --font:'Inter',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{font-family:var(--font);background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5;overflow-x:hidden}
+html,body{
+  font-family:var(--font);
+  min-height:100vh;font-size:14px;line-height:1.5;overflow-x:hidden;
+  color:var(--text-primary);
+  /* Glassmorphism background — rich dark gradient with subtle noise */
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(30,58,110,.9) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(15,30,60,1) 0%, transparent 55%),
+    radial-gradient(ellipse at 60% 10%, rgba(201,168,76,.08) 0%, transparent 40%),
+    linear-gradient(135deg,#060c1a 0%,#0e1f3e 40%,#091428 100%);
+  background-attachment:fixed;
+}
 button,input,select,textarea{font-family:var(--font)}
 #app{display:flex;min-height:100vh}
-#sidebar{width:var(--sidebar-w);background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease;overflow-y:auto}
+
+/* ── Sidebar — deep glass panel ── */
+#sidebar{
+  width:var(--sidebar-w);
+  background:rgba(8,16,36,0.82);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border-right:1px solid var(--glass-border);
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;
+  z-index:100;transition:transform .3s ease;overflow-y:auto;
+  box-shadow:4px 0 40px rgba(0,0,0,.4);
+}
 #main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-width:0;max-width:100%}
-.sidebar-logo{padding:20px 20px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
-.logo-text{font-family:'Playfair Display',serif;color:var(--gold);font-size:22px;font-weight:700}
-.logo-sub{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+
+.sidebar-logo{padding:20px 20px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.logo-text{font-family:'Playfair Display',serif;color:var(--gold);font-size:22px;font-weight:700;
+  text-shadow:0 0 20px rgba(201,168,76,.4)}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
 .sidebar-nav{flex:1;padding:12px;overflow-y:auto}
-.nav-section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:10px 8px 5px;font-weight:500}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.65);cursor:pointer;font-size:13.5px;font-weight:400;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left}
-.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9)}
-.nav-item.active{background:rgba(201,168,76,.18);color:var(--gold-light);font-weight:500}
+.nav-section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:10px 8px 5px;font-weight:500}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  color:rgba(255,255,255,.6);cursor:pointer;font-size:13.5px;font-weight:400;
+  transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(201,168,76,.22),rgba(201,168,76,.08));
+  color:var(--gold-light);font-weight:500;
+  border-left:2px solid var(--gold);
+  box-shadow:0 0 16px rgba(201,168,76,.1)}
 .nav-item.active i{color:var(--gold)}
 .nav-item i{width:18px;font-size:15px;text-align:center;flex-shrink:0}
 .nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px}
-.sidebar-footer{padding:12px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0}
-.user-card{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px}
-.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--navy-mid);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:13px;font-weight:600;flex-shrink:0}
+.sidebar-footer{padding:12px;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0}
+.user-card{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px}
+.user-avatar{width:34px;height:34px;border-radius:50%;
+  background:rgba(30,58,110,.6);border:1.5px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--gold);font-size:13px;font-weight:600;flex-shrink:0;
+  box-shadow:0 0 12px rgba(201,168,76,.25)}
 .user-name{font-size:13px;font-weight:500;color:rgba(255,255,255,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.user-role{font-size:11px;color:rgba(255,255,255,.4)}
-.sidebar-logout{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;border-radius:8px;color:#fc8181;cursor:pointer;font-size:13px;font-weight:500;border:1px solid rgba(252,129,129,.25);background:rgba(252,129,129,.08);width:100%;margin-top:8px;transition:all .15s}
-.sidebar-logout:hover{background:rgba(252,129,129,.18)}
-#sidebar-toggle{display:none;position:fixed;top:14px;left:14px;z-index:200;background:var(--navy);border:none;color:var(--gold);width:38px;height:38px;border-radius:8px;cursor:pointer;font-size:16px;align-items:center;justify-content:center}
-#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90}
-#topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;flex-wrap:nowrap}
+.user-role{font-size:11px;color:rgba(255,255,255,.38)}
+.sidebar-logout{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;
+  border-radius:10px;color:#fc8181;cursor:pointer;font-size:13px;font-weight:500;
+  border:1px solid rgba(252,129,129,.2);background:rgba(252,129,129,.06);
+  width:100%;margin-top:8px;transition:all .15s}
+.sidebar-logout:hover{background:rgba(252,129,129,.15)}
+
+#sidebar-toggle{display:none;position:fixed;top:14px;left:14px;z-index:200;
+  background:rgba(8,16,36,.85);backdrop-filter:var(--glass-blur-sm);
+  border:1px solid var(--glass-border);color:var(--gold);
+  width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:16px;
+  align-items:center;justify-content:center}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:90;backdrop-filter:blur(2px)}
+#topbar{
+  background:rgba(6,12,26,0.72);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border-bottom:1px solid var(--glass-border);
+  padding:0 24px;height:60px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;flex-wrap:nowrap}
 .topbar-title{font-size:17px;font-weight:600;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .topbar-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.sync-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);padding:5px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--border)}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:#48bb78;flex-shrink:0}
-.sync-dot.offline{background:#ed8936}.sync-dot.syncing{background:#4299e1;animation:pulse 1s infinite}
+.sync-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);padding:5px 10px;border-radius:20px;background:var(--glass-bg);border:1px solid var(--glass-border)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;flex-shrink:0}
+.sync-dot.offline{background:#fbbf24}.sync-dot.syncing{background:#60a5fa;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 #page{flex:1;padding:24px;overflow-x:hidden;max-width:100%}
 .page-view{display:none}.page-view.active{display:block}
-.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
-.card-header{padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.card{
+  background:var(--glass-bg);
+  backdrop-filter:var(--glass-blur-sm);-webkit-backdrop-filter:var(--glass-blur-sm);
+  border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .card-title{font-size:15px;font-weight:600;color:var(--text-primary)}
 .card-body{padding:20px}
 </style>
 <style>
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px}
-.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat-card{background:var(--glass-bg-mid);backdrop-filter:var(--glass-blur-sm);-webkit-backdrop-filter:var(--glass-blur-sm);border:1px solid var(--glass-border-strong);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .stat-card.gold::before{background:var(--gold)}.stat-card.blue::before{background:#4299e1}
 .stat-card.green::before{background:#48bb78}.stat-card.red::before{background:#f56565}
@@ -78,65 +143,65 @@ button,input,select,textarea{font-family:var(--font)}
 .stat-sub{font-size:12px;color:var(--text-muted)}
 .stat-icon{position:absolute;right:14px;top:16px;font-size:22px;opacity:.1;color:var(--navy)}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:var(--font);text-decoration:none;line-height:1;white-space:nowrap}
-.btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:var(--navy-light)}
-.btn-gold{background:var(--gold);color:var(--navy);font-weight:600}.btn-gold:hover{background:var(--gold-light)}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-secondary)}.btn-outline:hover{background:var(--bg)}
-.btn-danger{background:var(--danger-bg);color:var(--danger);border:1px solid #fed7d7}.btn-danger:hover{background:#fed7d7}
-.btn-success{background:var(--success-bg);color:var(--success);border:1px solid #9ae6b4}.btn-success:hover{background:#9ae6b4}
+.btn-primary{background:rgba(30,58,110,.7);backdrop-filter:var(--glass-blur-sm);color:#fff;border:1px solid rgba(255,255,255,.18)}.btn-primary:hover{background:rgba(30,58,110,.9)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#0f1e3c;font-weight:600;box-shadow:0 4px 14px rgba(201,168,76,.35)}.btn-gold:hover{filter:brightness(1.08);box-shadow:0 6px 20px rgba(201,168,76,.45)}
+.btn-outline{background:var(--glass-bg);backdrop-filter:var(--glass-blur-sm);border:1px solid var(--glass-border-strong);color:var(--text-secondary)}.btn-outline:hover{background:var(--glass-bg-mid);border-color:rgba(255,255,255,.3)}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.3)}.btn-danger:hover{background:rgba(248,113,113,.22)}
+.btn-success{background:rgba(74,222,128,.12);color:var(--success);border:1px solid rgba(74,222,128,.3)}.btn-success:hover{background:rgba(74,222,128,.22)}
 .btn-sm{padding:5px 12px;font-size:12.5px}.btn-icon{padding:7px 10px}.btn-xs{padding:3px 9px;font-size:12px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap}
 .badge-cyber{background:#ebf8ff;color:#2b6cb0}.badge-rental{background:#f0fff4;color:#276749}
 .badge-general{background:#faf5ff;color:#6b46c1}.badge-custom{background:#fff5f0;color:#c05621}
-.badge-active{background:var(--success-bg);color:var(--success)}.badge-inactive{background:var(--bg);color:var(--text-muted)}
-.badge-pending{background:var(--warning-bg);color:var(--warning)}
+.badge-active{background:rgba(74,222,128,.15);color:var(--success)}.badge-inactive{background:rgba(255,255,255,.06);color:var(--text-muted)}
+.badge-pending{background:rgba(251,191,36,.15);color:var(--warning)}
 .badge-synced{background:#c6f6d5;color:#276749}.badge-unsynced{background:#fff5f5;color:#c53030}
 .badge-alert{background:#fffbeb;color:#92400e}
-.badge-admin{background:#faf5ff;color:#6b46c1}.badge-assistant{background:#ebf8ff;color:#2b6cb0}
+.badge-admin{background:rgba(167,139,250,.15);color:#c4b5fd}.badge-assistant{background:rgba(96,165,250,.15);color:#93c5fd}
 .form-grid{display:grid;gap:14px}
 .form-grid-2{grid-template-columns:1fr 1fr}.form-grid-3{grid-template-columns:1fr 1fr 1fr}
 .form-group{display:flex;flex-direction:column;gap:5px;min-width:0}
 .form-label{font-size:12.5px;font-weight:500;color:var(--text-secondary)}
 .form-label .required{color:var(--danger);margin-left:2px}
-.form-control{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text-primary);background:var(--bg-card);transition:border-color .15s,box-shadow .15s;width:100%}
-.form-control:focus{outline:none;border-color:var(--navy-mid);box-shadow:0 0 0 3px rgba(30,58,110,.1)}
-.form-control:disabled{background:var(--bg);color:var(--text-muted);cursor:not-allowed}
-textarea.form-control{resize:vertical;min-height:80px}
+.form-control{padding:9px 12px;border:1px solid var(--glass-border-strong);border-radius:var(--radius-sm);font-size:14px;color:var(--text-primary);background:rgba(255,255,255,.06);backdrop-filter:var(--glass-blur-sm);transition:border-color .15s,box-shadow .15s;width:100%}
+.form-control:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.18)}
+.form-control:disabled{background:rgba(255,255,255,.02);color:var(--text-muted);cursor:not-allowed}
+textarea.form-control{resize:vertical;min-height:80px}select.form-control option{background:#0e1f3e;color:#f0f4ff}
 .form-hint{font-size:11.5px;color:var(--text-muted)}
-.section-divider{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--navy-mid);padding:8px 0 4px;border-bottom:1.5px solid var(--gold-pale);margin:6px 0}
+.section-divider{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--gold-light);padding:8px 0 4px;border-bottom:1px solid rgba(201,168,76,.25);margin:6px 0}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
-.data-table thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
-.data-table tbody tr{border-bottom:1px solid var(--border-light);transition:background .1s;cursor:pointer}
-.data-table tbody tr:hover{background:#f7f8ff}
+.data-table thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);background:rgba(255,255,255,.04);border-bottom:1px solid var(--glass-border);white-space:nowrap}
+.data-table tbody tr{border-bottom:1px solid var(--glass-border);transition:background .1s;cursor:pointer}
+.data-table tbody tr:hover{background:rgba(255,255,255,.05)}
 .data-table tbody tr:last-child{border-bottom:none}
-.data-table tbody td{padding:12px 14px;color:var(--text-primary);vertical-align:middle}
+.data-table tbody td{padding:12px 14px;color:var(--text-primary);vertical-align:middle;border-bottom:1px solid var(--glass-border)}
 .client-name-cell{display:flex;align-items:center;gap:10px}
 .avatar-sm{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
-.av-navy{background:var(--navy);color:var(--gold)}
-.av-blue{background:#bee3f8;color:#2b6cb0}
-.av-purple{background:#e9d8fd;color:#6b46c1}
+.av-navy{background:rgba(30,58,110,.7);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+.av-blue{background:rgba(96,165,250,.18);color:#93c5fd;border:1px solid rgba(96,165,250,.2)}
+.av-purple{background:rgba(167,139,250,.18);color:#c4b5fd;border:1px solid rgba(167,139,250,.2)}
 .av-green{background:#c6f6d5;color:#276749}
 .client-id{font-size:11px;color:var(--text-muted)}
 .search-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .search-input-wrap{position:relative;flex:1;min-width:200px}
 .search-input-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px}
-.search-input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13.5px;color:var(--text-primary);background:var(--bg-card)}
-.search-input:focus{outline:none;border-color:var(--navy-mid)}
-.modal-backdrop{position:fixed;inset:0;background:rgba(15,30,60,.55);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.search-input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--glass-border-strong);border-radius:var(--radius-sm);font-size:13.5px;color:var(--text-primary);background:rgba(255,255,255,.06);backdrop-filter:var(--glass-blur-sm)}
+.search-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.15)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(4,8,20,.7);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
 .modal-backdrop.open{display:flex}
-.modal{background:var(--bg-card);border-radius:14px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:modal-in .2s ease}
+.modal{background:rgba(10,18,40,0.82);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border-strong);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6),0 0 0 1px rgba(201,168,76,.08);animation:modal-in .2s ease}
 @keyframes modal-in{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-.modal-header{padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--bg-card);z-index:10}
+.modal-header{padding:18px 24px 14px;border-bottom:1px solid var(--glass-border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:rgba(10,18,40,0.92);backdrop-filter:var(--glass-blur);z-index:10}
 .modal-title{font-size:17px;font-weight:700;color:var(--text-primary)}
 .modal-sub{font-size:12.5px;color:var(--text-muted);margin-top:2px}
 .modal-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1;flex-shrink:0}
 .modal-close:hover{background:var(--bg);color:var(--text-primary)}
 .modal-body{padding:18px 24px}
-.modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg);border-radius:0 0 14px 14px;flex-wrap:wrap}
-.tabs{display:flex;gap:4px;border-bottom:1.5px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--glass-border);display:flex;justify-content:flex-end;gap:10px;background:rgba(6,12,26,0.5);border-radius:0 0 16px 16px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;border-bottom:1.5px solid var(--glass-border);margin-bottom:20px;flex-wrap:wrap}
 .tab-btn{padding:9px 16px;background:none;border:none;font-size:13.5px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s}
-.tab-btn:hover{color:var(--text-primary)}.tab-btn.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-btn:hover{color:var(--text-primary)}.tab-btn.active{color:var(--gold-light);border-bottom-color:var(--gold)}
 .tab-panel{display:none}.tab-panel.active{display:block}
 .timeline{position:relative;padding-left:24px}
 .timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--border)}
@@ -191,7 +256,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .sync-item-time{font-size:11.5px;color:var(--text-muted)}
 
 /* ── Daily Planner ── */
-.planner-note-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-light)}
+.planner-note-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--glass-border)}
 .planner-note-item:last-child{border-bottom:none}
 .planner-note-item.done .planner-note-text{text-decoration:line-through;color:var(--text-muted)}
 .planner-note-check{margin-top:3px;cursor:pointer;flex-shrink:0}
@@ -301,11 +366,11 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .fin-ledger{background:var(--bg);padding:14px 20px 14px 48px;border-bottom:1px solid var(--border-light);border-left:3px solid var(--navy);}
 /* Remove padding on fin-client-list so rows span edge-to-edge */
 #fin-client-list{padding:0 !important;}
-.fin-ledger-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12.5px;border-bottom:1px solid var(--border-light)}
+.fin-ledger-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12.5px;border-bottom:1px solid var(--glass-border)}
 .fin-ledger-row:last-child{border-bottom:none}
-.fin-badge-paid{background:var(--success-bg);color:var(--success);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
-.fin-badge-partial{background:var(--warning-bg);color:var(--warning);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
-.fin-badge-unpaid{background:var(--danger-bg);color:var(--danger);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.fin-badge-paid{background:rgba(74,222,128,.15);color:var(--success);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.fin-badge-partial{background:rgba(251,191,36,.15);color:var(--warning);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.fin-badge-unpaid{background:rgba(248,113,113,.15);color:var(--danger);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
 @media(max-width:1024px){.cal-layout{grid-template-columns:1fr}.cal-detail-panel{position:static;max-height:none}.fin-summary-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){
   /* Chat — stack sidebar on top, hide it when message is open */
@@ -329,7 +394,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
   .form-grid-2{grid-template-columns:1fr!important;}
 }
 .settings-wrap{display:flex;flex-direction:column;gap:18px;max-width:760px}
-.settings-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.settings-section{background:var(--glass-bg);backdrop-filter:var(--glass-blur-sm);border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden}
 .settings-section-head{padding:14px 18px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px}
 .settings-section-head i{color:var(--gold);font-size:16px;width:20px;text-align:center}
 .settings-section-head span{font-size:14.5px;font-weight:600}
@@ -339,8 +404,8 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .settings-row-text{flex:1;min-width:140px}
 .settings-row-label{font-size:14px;font-weight:500;color:var(--text-primary)}
 .settings-row-desc{font-size:12px;color:var(--text-muted);margin-top:2px}
-.toggle{width:44px;height:24px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;border:none}
-.toggle.on{background:var(--navy)}
+.toggle{width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,.12);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;border:1px solid rgba(255,255,255,.18)}
+.toggle.on{background:linear-gradient(135deg,var(--gold),var(--gold-light));border-color:var(--gold);box-shadow:0 0 12px rgba(201,168,76,.4)}
 .toggle::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle.on::after{transform:translateX(20px)}
 .field-builder-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;flex-wrap:wrap}
@@ -348,7 +413,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .field-builder-item .field-label-input{flex:1;min-width:100px;border:none;background:transparent;font-size:13.5px;color:var(--text-primary);padding:4px}
 .field-builder-item .field-label-input:focus{outline:none}
 /* ── Setup / Login (mobile-first) ── */
-#setup-screen,#login-screen{position:fixed;inset:0;background:var(--navy);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+#setup-screen,#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#060c1a 0%,#0e1f3e 60%,#091428 100%);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
 .setup-card,.login-card{background:var(--bg-card);border-radius:16px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,.4);margin:auto}
 .setup-logo{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--navy);margin-bottom:4px}
 .setup-logo span{color:var(--gold)}
@@ -373,18 +438,20 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .rich-editor:focus{border-color:var(--navy-mid)}
 .chat-unread-badge{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;border:1.5px solid var(--bg-card);line-height:1;pointer-events:none;}
 /* ── Chat ── */
-.chat-layout{display:flex;height:calc(100vh - 160px);min-height:420px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg-card)}
-.chat-sidebar{width:220px;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;background:var(--bg)}
-.chat-contact{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border-light)}
-.chat-contact:hover{background:var(--bg-card)}
-.chat-contact.active{background:#e9eef9;border-left:3px solid var(--navy)}
-.chat-contact-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.chat-layout{display:flex;height:calc(100vh - 160px);min-height:420px;border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;background:var(--glass-bg)}
+.chat-sidebar{width:220px;border-right:1px solid var(--glass-border);overflow-y:auto;flex-shrink:0;background:rgba(6,12,26,.4);scrollbar-width:thin}
+.chat-contact{display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light)}
+.chat-contact:hover{background:rgba(255,255,255,.05)}
+.chat-contact.active{background:rgba(201,168,76,.1);border-left:3px solid var(--gold)}
+.chat-contact-name{font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+/* Section labels — compact, no excessive gap above */
+.chat-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);padding:6px 12px 2px;background:transparent;margin-top:2px}
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
 .chat-header{padding:13px 18px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px;flex-shrink:0}
 .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .chat-msg{max-width:75%;padding:9px 13px;border-radius:12px;font-size:13.5px;line-height:1.5;word-break:break-word}
 .chat-msg.mine{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:3px}
-.chat-msg.theirs{align-self:flex-start;background:var(--bg);color:var(--text-primary);border-bottom-left-radius:3px}
+.chat-msg.theirs{align-self:flex-start;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:var(--text-primary);border-bottom-left-radius:3px}
 .chat-msg-time{font-size:10px;opacity:.6;margin-top:3px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .chat-msg-controls{opacity:0;transition:opacity .15s;display:inline-flex;align-items:center;}
 .chat-msg:hover .chat-msg-controls{opacity:1}
@@ -402,7 +469,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .chat-attach-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .chat-send-btn{width:36px;height:36px;border-radius:50%;border:none;background:var(--navy);color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 /* ── Tasks ── */
-.task-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--border)}
+.task-card{background:rgba(255,255,255,.07);backdrop-filter:var(--glass-blur-sm);border:1px solid var(--glass-border);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--border)}
 .task-card.priority-high{border-left-color:#f56565}
 .task-card.priority-medium{border-left-color:#ed8936}
 .task-card.priority-low{border-left-color:#48bb78}
@@ -426,16 +493,22 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
   #main{margin-left:0}
   #topbar{padding:0 14px 0 58px}
   .topbar-title{font-size:15px}
-  #page{padding:14px}
+  #page{padding:12px}
   .form-grid-2,.form-grid-3{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .modal{max-width:100%;border-radius:16px 16px 0 0;margin-top:auto;max-height:94vh}
   .modal-backdrop{align-items:flex-end;padding:0}
   .topbar-actions .sync-badge span{display:none}
+  /* Chat — vertical stack on mobile */
   .chat-layout{flex-direction:column;height:auto}
-  .chat-sidebar{width:100%;max-height:140px;display:flex;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}
-  .chat-contact{flex-direction:column;min-width:80px;text-align:center;border-bottom:none;border-right:1px solid var(--border-light)}
+  .chat-sidebar{width:100%!important;max-height:130px;display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden!important;border-right:none;border-bottom:1px solid var(--border)}
+  .chat-contact{flex-direction:column;align-items:center;min-width:72px;padding:8px 6px;text-align:center;border-bottom:none;border-right:1px solid var(--border-light);flex-shrink:0}
+  .chat-contact:last-child{border-right:none}
+  .chat-contact-name{font-size:10px;margin-top:3px;max-width:68px}
+  .chat-section-label{display:none} /* hide labels in horizontal scroll mode */
   .chat-messages{max-height:50vh}
+  /* Hide New Group button in horizontal scroll mode — accessible via ⊕ icon */
+  .chat-newgroup-mobile{display:flex!important}
   .kanban{grid-template-columns:1fr!important}
   .card-body{padding:14px}
   .modal-body{padding:14px 16px}
@@ -443,9 +516,19 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
   .modal-footer{padding:12px 16px}
   .settings-row{flex-direction:column;align-items:flex-start}
   .settings-row .toggle,.settings-row button,.settings-row select{align-self:flex-start}
+  /* Chatbot — stays visible on mobile, just repositioned */
+  #chatbot-btn{bottom:16px!important;right:16px!important}
+  #chatbot-panel{right:8px!important;bottom:80px!important;width:calc(100vw - 16px)!important;max-height:72vh!important;max-width:420px}
 }
-@media(max-width:480px){.stats-grid{grid-template-columns:1fr}.modal-footer{flex-direction:column-reverse}.modal-footer .btn{width:100%;justify-content:center}.search-bar{flex-direction:column;align-items:stretch}.search-bar select{width:100%!important}}
-.text-muted{color:var(--text-muted)}.text-sm{font-size:12.5px}.flex{display:flex}.items-center{align-items:center}.gap-2{gap:8px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}.w-full{width:100%}.font-medium{font-weight:500}.font-semibold{font-weight:600}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+  .modal-footer{flex-direction:column-reverse}
+  .modal-footer .btn{width:100%;justify-content:center}
+  .search-bar{flex-direction:column;align-items:stretch}
+  .search-bar select{width:100%!important}
+  .fin-summary-grid{grid-template-columns:1fr}
+  .cal-layout{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -748,7 +831,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
           <div style="display:flex;flex-direction:column;width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg);">
             <div class="chat-sidebar" id="chat-contact-list" style="flex:1;overflow-y:auto;border-right:none;width:100%;"></div>
             <div style="padding:10px 12px;border-top:1px solid var(--border);">
-              <button class="btn btn-outline btn-sm w-full" style="justify-content:center;font-size:12px;" onclick="openModal('modal-create-group')">
+              <button class="btn btn-outline btn-sm w-full" style="justify-content:center;font-size:12px;" onclick="openCreateGroupModal()">
                 <i class="fas fa-users" style="margin-right:6px;"></i> New Group
               </button>
             </div>
@@ -1911,6 +1994,26 @@ async function saveFormSchema(){
   const {error}=await sb.from('form_schemas').upsert({category_id:S.fbActiveCat,fields:S.formSchemas[S.fbActiveCat],updated_at:new Date().toISOString()});
   if(error){showToast('Save failed: '+error.message,'error');return;}
   showToast('Form schema saved!','success');
+}
+
+async function deleteCategory(catId){
+  // Block deletion if any clients use this category
+  const inUse=S.clients.filter(c=>c.case_type===catId).length;
+  if(inUse>0){
+    showToast(`Cannot delete — ${inUse} client${inUse>1?'s are':' is'} using this category. Reassign them first.`,'error');
+    return;
+  }
+  const cat=S.categories.find(c=>c.id===catId);
+  if(!confirm(`Delete category "${cat?.label||catId}"? This also deletes its form schema.`))return;
+  await sb.from('form_schemas').delete().eq('category_id',catId);
+  const {error}=await sb.from('categories').delete().eq('id',catId);
+  if(error){showToast('Delete failed: '+error.message,'error');return;}
+  S.categories=S.categories.filter(c=>c.id!==catId);
+  delete S.formSchemas[catId];
+  S.fbActiveCat=S.categories[0]?.id||null;
+  renderFormBuilder();
+  buildAssigneeFilter();
+  showToast(`Category "${cat?.label||catId}" deleted.`,'warning');
 }
 function setupFbDrag(){
   const list=document.getElementById('fb-fields-list');
@@ -4151,23 +4254,18 @@ function startPolling(){
     });
 
   // ── Background safety-net poll (30s) ─────────────────────────────────────
-  // Catches anything Realtime might miss when tab is backgrounded for a long time
   S._pollTimer = setInterval(async ()=>{
     if(!S.user) return;
     await checkForNewItems();
-    // Refresh task data in background (Realtime keeps it current, this is backup)
     const {data} = await sb.from('tasks').select('*').order('created_at',{ascending:false});
     if(data){ S.tasks=data; updateStats(); }
   }, 30000);
-}
 
-// ── Fallback polling (if Realtime is not enabled on the Supabase project) ──
-// Activated automatically if Realtime subscription fails.
-// Polls every 5s for messages when chat is active, 10s for tasks.
-function startFallbackPolling(){
-  if(S._fallbackTimer) return;  // already running
-  console.warn('LexDesk: running in fallback poll mode (5s/10s)');
-  S._fallbackTimer = setInterval(async ()=>{
+  // ── Active-view fast poll (5s) — ALWAYS runs, unconditionally ─────────────
+  // Ensures messages and tasks update instantly without a page refresh,
+  // even if Supabase Realtime is disabled or the WebSocket connection drops.
+  if(S._fastPollTimer) clearInterval(S._fastPollTimer);
+  S._fastPollTimer = setInterval(async ()=>{
     if(!S.user) return;
     const chatActive  = document.getElementById('view-chat')?.classList.contains('active');
     const tasksActive = document.getElementById('view-tasks')?.classList.contains('active');
@@ -4181,7 +4279,6 @@ function startFallbackPolling(){
       const {data} = await sb.from('tasks').select('*').order('created_at',{ascending:false});
       if(data){ S.tasks=data; renderTasks(); updateStats(); }
     }
-    await checkForNewItems();
   }, 5000);
 }
 </script>
@@ -5806,186 +5903,108 @@ async function removeGroupMember(groupId,userId){
 </script>
 <script>
 // ════════════════════════════════════════════
-//  MISC FEATURES:
-//  • Category deletion
-//  • Task auto-deletion (15-day cleanup)
-//  • Forgot / Change password
-//  • User archive / permanent delete
-//  • Finances hide for non-admin
+//  MISC FEATURES — password, user management,
+//  archive/restore, task cleanup, group helpers
 // ════════════════════════════════════════════
 
-// ── Delete Category ──────────────────────────────────────────────────────
-async function deleteCategory(catId){
-  const cat=S.categories.find(c=>c.id===catId);
-  if(!cat){showToast('Category not found.','error');return;}
-  if(cat.built_in){showToast('Built-in categories cannot be deleted.','error');return;}
-  const clientCount=S.clients.filter(c=>c.case_type===catId).length;
-  if(clientCount>0){
-    showToast(`Cannot delete "${cat.label}" — ${clientCount} client(s) use this category. Reassign them first.`,'error');
-    return;
-  }
-  if(!confirm(`Delete category "${cat.label}"? This cannot be undone.`)) return;
-  // Delete form schema first (FK constraint)
-  await sb.from('form_schemas').delete().eq('category_id',catId);
-  const {error}=await sb.from('categories').delete().eq('id',catId);
-  if(error){showToast('Delete failed: '+error.message,'error');return;}
-  S.categories=S.categories.filter(c=>c.id!==catId);
-  delete S.formSchemas[catId];
-  buildSidebar();buildCaseTypeTabs();buildCategoryFilter();renderFormBuilder();
-  showToast(`Category "${cat.label}" deleted.`,'success');
-}
-
-// ── Task auto-delete (done/cancelled older than 15 days) ─────────────────
-async function autoDeleteOldTasks(){
-  if(!S.user)return;
-  const cutoff=new Date();
-  cutoff.setDate(cutoff.getDate()-15);
-  const cutoffStr=cutoff.toISOString();
-  const {data:oldTasks}=await sb.from('tasks')
-    .select('id')
-    .in('status',['done','cancelled'])
-    .lt('updated_at',cutoffStr);
-  if(!oldTasks?.length)return;
-  const ids=oldTasks.map(t=>t.id);
-  await sb.from('task_comments').delete().in('task_id',ids);
-  const {error}=await sb.from('tasks').delete().in('id',ids);
-  if(!error&&ids.length){
-    S.tasks=S.tasks.filter(t=>!ids.includes(t.id));
-    renderTasks&&renderTasks();
-    console.log(`Auto-deleted ${ids.length} old task(s).`);
-  }
-}
-
-// ── Forgot password ───────────────────────────────────────────────────────
+// ── Forgot / Change password ──────────────────────────────────────────────
 async function doForgotPassword(){
-  const email=(document.getElementById('li-email').value||'').trim();
-  if(!email){showToast('Enter your email address first.','error');return;}
+  const email=(document.getElementById('forgot-email')?.value||'').trim();
+  if(!email){showToast('Enter your email address.','error');return;}
   const {error}=await sb.auth.resetPasswordForEmail(email,{
-    redirectTo:window.location.href.split('#')[0]+'#reset-password'
+    redirectTo:window.location.href.split('#')[0]+'#reset'
   });
-  if(error){showToast('Failed: '+error.message,'error');return;}
-  showToast('Password reset email sent! Check your inbox.','success');
+  if(error){showToast('Could not send reset email: '+error.message,'error');return;}
+  showToast('Reset link sent! Check your inbox.','success');
 }
 
-// ── Handle password reset redirect (called on DOMContentLoaded) ──────────
 async function checkPasswordResetMode(){
-  // Supabase puts the recovery token in the URL hash after redirect
   const hash=window.location.hash;
-  if(!hash.includes('type=recovery')&&!hash.includes('reset-password')) return false;
-  // Extract session from hash (Supabase auth handles this automatically)
-  const {data:{session}}=await sb.auth.getSession();
-  if(session){
-    // Show change-password modal
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='none';
-    const modal=document.getElementById('modal-change-password');
-    if(modal){ modal.classList.add('open'); }
-    return true;
+  if(hash.includes('type=recovery')||hash.includes('#reset')){
+    openModal('modal-change-password');
   }
-  return false;
 }
 
-// ── Change password ───────────────────────────────────────────────────────
 async function doChangePassword(){
-  const newPwd=(document.getElementById('cp-new').value||'').trim();
-  const confirm=(document.getElementById('cp-confirm').value||'').trim();
-  const errEl=document.getElementById('cp-err');
-  errEl.style.display='none';
-  if(newPwd.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
-  if(newPwd!==confirm){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
-  const {error}=await sb.auth.updateUser({password:newPwd});
-  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  const pw=(document.getElementById('new-password')?.value||'').trim();
+  const pw2=(document.getElementById('new-password-confirm')?.value||'').trim();
+  if(!pw||pw.length<8){showToast('Password must be at least 8 characters.','error');return;}
+  if(pw!==pw2){showToast('Passwords do not match.','error');return;}
+  const {error}=await sb.auth.updateUser({password:pw});
+  if(error){showToast('Failed: '+error.message,'error');return;}
   closeModal('modal-change-password');
-  showToast('Password changed successfully.','success');
-  // Clean up URL hash
-  history.replaceState(null,'',window.location.pathname);
+  showToast('Password changed successfully!','success');
+  window.location.hash='';
 }
 
-// ── Archive / Permanently remove a user ──────────────────────────────────
+// ── Archive / restore / permanently remove users ──────────────────────────
 async function archiveUser(userId){
-  if(userId===S.user.id){showToast('You cannot archive yourself.','error');return;}
-  const u=S.users.find(x=>x.id===userId);
-  if(u?.is_founder){showToast('The founding admin cannot be archived.','error');return;}
-  if(!confirm(`Archive ${u?.full_name}? They will lose access but their data is kept.`)) return;
-  await sb.from('clients').update({assigned_to:null}).eq('assigned_to',userId);
+  if(!confirm('Archive this user? They will lose access but their data is preserved. You can restore them later.'))return;
   const {error}=await sb.from('profiles').update({approved:false,archived:true}).eq('id',userId);
-  if(error){showToast('Failed: '+error.message,'error');return;}
+  if(error){showToast('Archive failed: '+error.message,'error');return;}
   await refreshAll();
-  showToast(`${u?.full_name} archived.`,'warning');
+  showToast('User archived.','warning');
 }
 
 async function restoreUser(userId){
   const {error}=await sb.from('profiles').update({approved:true,archived:false}).eq('id',userId);
-  if(error){showToast('Failed: '+error.message,'error');return;}
+  if(error){showToast('Restore failed: '+error.message,'error');return;}
   await refreshAll();
   showToast('User restored.','success');
 }
 
 async function permanentlyRemoveUser(userId){
-  if(userId===S.user.id){showToast('You cannot remove yourself.','error');return;}
-  const u=[...S.users,...(S.pendingUsers||[]),...(S.archivedUsers||[])].find(x=>x.id===userId);
-  if(u?.is_founder){showToast('The founding admin cannot be removed.','error');return;}
-  if(!confirm(`⚠️ PERMANENTLY remove ${u?.full_name}?\n\nThis deletes their profile from the system. Their Supabase Auth account will remain (Supabase doesn't expose user deletion to the client SDK) but they won't be able to log into LexDesk.\n\nThis cannot be undone.`)) return;
+  const u=S.users.find(x=>x.id===userId)||S.archivedUsers?.find(x=>x.id===userId);
+  if(u?.is_founder){showToast('The founding Admin cannot be removed.','error');return;}
+  if(!confirm(`Permanently remove ${u?.full_name||'this user'}? This cannot be undone. Their assigned clients will be unassigned.`))return;
   await sb.from('clients').update({assigned_to:null}).eq('assigned_to',userId);
   const {error}=await sb.from('profiles').delete().eq('id',userId);
   if(error){showToast('Remove failed: '+error.message,'error');return;}
   await refreshAll();
-  showToast(`${u?.full_name} permanently removed.`,'warning');
+  showToast('User permanently removed.','warning');
 }
 
-// ── Hide Finances from non-admin in sidebar ───────────────────────────────
+// ── Auto-delete old completed/cancelled tasks (hard delete, 15 days) ──────
+async function autoDeleteOldTasks(){
+  const cutoff=new Date(Date.now()-15*86400000).toISOString();
+  const {data:old}=await sb.from('tasks')
+    .select('id').in('status',['done','cancelled']).lt('updated_at',cutoff);
+  if(!old?.length)return;
+  const ids=old.map(t=>t.id);
+  await sb.from('task_comments').delete().in('task_id',ids);
+  await sb.from('tasks').delete().in('id',ids);
+  // Refresh local cache
+  const {data}=await sb.from('tasks').select('*').order('created_at',{ascending:false});
+  if(data) S.tasks=data;
+}
+
+// ── Apply finances visibility (admin-only) ────────────────────────────────
 function applyFinancesVisibility(){
   document.querySelectorAll('.nav-finances').forEach(el=>{
-    el.style.display = (isAdmin()||canViewFinances()) ? '' : 'none';
+    el.style.display=(isAdmin()||canViewFinances())?'':'none';
   });
 }
 
-
-// ── UI aliases for HTML onclick handlers ──────────────────────────────────
-// These thin wrappers bridge HTML onclicks to the underlying functions.
-
-function forgotPassword()       { doForgotPassword(); }
-function changePassword()       { doChangePassword(); }
+// ── UI onclick aliases ────────────────────────────────────────────────────
+function forgotPassword()        { doForgotPassword(); }
+function changePassword()        { doChangePassword(); }
 function setNewPasswordFromReset(){ doChangePassword(); }
 
 function toggleChatbotSetting(btn){
-  const nowEnabled = !btn.classList.contains('on');
-  btn.classList.toggle('on', nowEnabled);
+  const nowEnabled=!btn.classList.contains('on');
+  btn.classList.toggle('on',nowEnabled);
   setChatbotEnabled(nowEnabled);
-  showToast(nowEnabled ? 'Chatbot enabled.' : 'Chatbot disabled.', 'info');
+  showToast(nowEnabled?'Chatbot enabled.':'Chatbot disabled.','info');
 }
 
-// ── Group chat UI wrappers (called from modal HTML) ───────────────────────
-async function createChatGroup(){
-  // IDs match the modal: id="grp-name" and class="grp-member-cb"
-  const nameEl = document.getElementById('grp-name');
-  const name = (nameEl?.value||'').trim();
-  if(!name){ showToast('Group name is required.','error'); if(nameEl) nameEl.focus(); return; }
-  const checkboxes = document.querySelectorAll('.grp-member-cb:checked');
-  const memberIds = [...checkboxes].map(cb=>cb.value);
-  if(!memberIds.length){showToast('Select at least one member.','error');return;}
-  // Create group
-  const {data:group,error}=await sb.from('chat_groups')
-    .insert({name,created_by:S.user.id}).select().single();
-  if(error){showToast('Failed: '+error.message,'error');return;}
-  // Add creator + selected members + senior advocate as admins
-  const adminIds=new Set([S.user.id]);
-  S.users.filter(u=>u.role==='admin').forEach(u=>adminIds.add(u.id));
-  const allMembers=[...new Set([S.user.id,...memberIds,...adminIds])];
-  await sb.from('group_members').insert(
-    allMembers.map(uid=>({group_id:group.id,user_id:uid,is_admin:adminIds.has(uid)}))
-  );
-  closeModal('modal-create-group');
-  await loadChatGroups();
-  renderChatContacts();
-  selectChatGroup(group.id);
-  showToast(`Group "${name}" created.`,'success');
-}
+// ── Group modal helpers ───────────────────────────────────────────────────
+// These are thin wrappers — the real logic is in _js20_groups.html.
+// The modal HTML calls createGroup() which is defined in _js20_groups.html.
 
 async function addToGroup(){
   const sel=document.getElementById('manage-grp-add-user');
   const uid=sel?.value;
-  if(!uid||!S._managingGroupId){return;}
+  if(!uid||!S._managingGroupId)return;
   const {error}=await sb.from('group_members')
     .insert({group_id:S._managingGroupId,user_id:uid,is_admin:false});
   if(error){showToast('Failed: '+error.message,'error');return;}
@@ -6008,28 +6027,22 @@ async function leaveGroup(){
   showToast('You left the group.','info');
 }
 
-// ── Delete a group (admin of group only) ─────────────────────────────────
 async function deleteGroup(){
-  const groupId = S._managingGroupId;
-  if(!groupId){ showToast('No group selected.','error'); return; }
-  const group = S.chatGroups?.find(g=>g.id===groupId);
-  if(!confirm(`Delete group "${group?.name||'this group'}" permanently? All messages in this group will be lost.`)) return;
-  // Delete messages first (FK constraint)
-  await sb.from('messages').delete().eq('group_id', groupId);
-  // Delete members (cascade would handle this but be explicit)
-  await sb.from('group_members').delete().eq('group_id', groupId);
-  const {error} = await sb.from('chat_groups').delete().eq('id', groupId);
-  if(error){ showToast('Delete failed: '+error.message,'error'); return; }
+  const groupId=S._managingGroupId;
+  if(!groupId){showToast('No group selected.','error');return;}
+  const group=S.chatGroups?.find(g=>g.id===groupId);
+  if(!confirm(`Delete group "${group?.name||'this group'}" permanently?`))return;
+  await sb.from('messages').delete().eq('group_id',groupId);
+  await sb.from('group_members').delete().eq('group_id',groupId);
+  const {error}=await sb.from('chat_groups').delete().eq('id',groupId);
+  if(error){showToast('Delete failed: '+error.message,'error');return;}
   closeModal('modal-group-settings');
-  S.activeGroupId = null;
-  S.activeChatPeer = null;
-  S._managingGroupId = null;
+  S.activeGroupId=null; S.activeChatPeer=null; S._managingGroupId=null;
   await loadChatGroups();
   renderChatContacts();
   showToast('Group deleted.','warning');
 }
 </script>
-  
 <script>
 // ════════════════════════════════════════════
 //  LEXDESK ASSISTANT — conversational chat UI
