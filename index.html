@@ -725,7 +725,14 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
       <!-- CHAT -->
       <div class="page-view" id="view-chat">
         <div class="chat-layout">
-          <div class="chat-sidebar" id="chat-contact-list"></div>
+          <div style="display:flex;flex-direction:column;width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg);">
+            <div class="chat-sidebar" id="chat-contact-list" style="flex:1;overflow-y:auto;border-right:none;width:100%;"></div>
+            <div style="padding:10px 12px;border-top:1px solid var(--border);">
+              <button class="btn btn-outline btn-sm w-full" style="justify-content:center;font-size:12px;" onclick="openModal('modal-create-group')">
+                <i class="fas fa-users" style="margin-right:6px;"></i> New Group
+              </button>
+            </div>
+          </div>
           <div class="chat-main">
             <div class="chat-header" id="chat-header-title">Team Channel</div>
             <div class="chat-messages" id="chat-messages"></div>
@@ -762,6 +769,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 
       <!-- USERS (admin only) -->
       <div class="page-view" id="view-users">
+        <div id="users-hierarchy-strip"></div>
         <div class="card mb-4">
           <div class="card-header"><span class="card-title">Signup Code</span></div>
           <div class="card-body">
@@ -1092,15 +1100,30 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 <div class="modal-backdrop" id="modal-add-user">
   <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <div><div class="modal-title" id="au-title">Assign Role</div></div>
+      <div><div class="modal-title" id="au-title">Assign Role</div>
+      <div class="modal-sub">Set the team member's base role and custom permission level</div></div>
       <button class="modal-close" onclick="closeModal('modal-add-user')">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-grid" style="gap:13px;">
         <div class="form-group"><label class="form-label">Name</label><input class="form-control" id="au-name" type="text" disabled/></div>
         <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="au-email" type="email" disabled/></div>
-        <div class="form-group"><label class="form-label">Role</label><select class="form-control" id="au-role"><option value="assistant">Assistant Lawyer</option><option value="admin">Admin (Full Access)</option></select></div>
-        <div class="form-group"><label class="form-label">Bar Registration</label><input class="form-control" id="au-bar" type="text"/></div>
+        <div class="form-group">
+          <label class="form-label">Base Role</label>
+          <select class="form-control" id="au-role">
+            <option value="assistant">Team Member (Non-Admin)</option>
+            <option value="admin">Admin / Senior Advocate (Full Access)</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Admin gets full access regardless of custom role below.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Custom Role / Hierarchy Position</label>
+          <select class="form-control" id="au-custom-role">
+            <option value="">— No custom role assigned —</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Custom roles define specific permissions (view clients, finances, etc.). Create roles in <strong>Admin → Roles</strong>.</div>
+        </div>
+        <div class="form-group"><label class="form-label">Bar Registration No.</label><input class="form-control" id="au-bar" type="text"/></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1377,7 +1400,10 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
         <button class="btn btn-gold btn-sm" onclick="addGroupMember()"><i class="fas fa-plus"></i> Add</button>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-group-settings')">Done</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteGroup()" title="Delete group permanently"><i class="fas fa-trash"></i> Delete Group</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-group-settings')">Done</button>
+    </div>
   </div>
 </div>
 
@@ -2467,23 +2493,35 @@ async function regenerateSignupCode(){
 function openAddUserModal(userId){
   const u=[...S.users,...(S.pendingUsers||[])].find(x=>x.id===userId);
   if(!u)return;
-  document.getElementById('au-title').textContent=u.approved?'Edit Role':'Approve & Assign Role';
-  document.getElementById('au-name').value=u.full_name;
-  document.getElementById('au-email').value=u.email||'';
-  document.getElementById('au-role').value=u.role==='pending'?'assistant':u.role;
-  document.getElementById('au-bar').value=u.bar_number||'';
-  S._approvingUserId=userId;
+  document.getElementById('au-title').textContent = u.approved ? 'Edit Team Member' : 'Approve & Assign Role';
+  document.getElementById('au-name').value  = u.full_name;
+  document.getElementById('au-email').value = u.email||'';
+  document.getElementById('au-role').value  = u.role==='pending'?'assistant':u.role;
+  document.getElementById('au-bar').value   = u.bar_number||'';
+  // Populate custom role dropdown with all defined roles
+  const crSel = document.getElementById('au-custom-role');
+  if(crSel){
+    crSel.innerHTML = '<option value="">— No custom role assigned —</option>' +
+      (S.customRoles||[]).map(r=>`<option value="${r.id}">${escHtml(r.name)}</option>`).join('');
+    crSel.value = u.custom_role_id||'';
+  }
+  S._approvingUserId = userId;
   openModal('modal-add-user');
 }
 async function approveUser(){
-  const id=S._approvingUserId;
-  const role=document.getElementById('au-role').value;
-  const bar=document.getElementById('au-bar').value;
-  const {error}=await sb.from('profiles').update({role,approved:true,bar_number:bar}).eq('id',id);
+  const id  = S._approvingUserId;
+  const role = document.getElementById('au-role').value;
+  const bar  = document.getElementById('au-bar').value;
+  const customRoleId = document.getElementById('au-custom-role')?.value || null;
+  const payload = {
+    role, approved:true, bar_number:bar,
+    custom_role_id: customRoleId||null
+  };
+  const {error}=await sb.from('profiles').update(payload).eq('id',id);
   if(error){showToast('Failed: '+error.message,'error');return;}
   closeModal('modal-add-user');
   await refreshAll();
-  showToast('User approved!','success');
+  showToast('User approved and role assigned!','success');
 }
 async function changeUserRole(userId,newRole){
   if(userId===S.user.id&&newRole!=='admin'){showToast('You cannot demote yourself.','error');return;}
@@ -2505,6 +2543,45 @@ function renderUsers(){
   if(!isAdmin())return;
   const codeDisp=document.getElementById('signup-code-display');
   if(codeDisp) codeDisp.textContent=S.signupCode||'—';
+
+  // ── Hierarchy overview strip ──────────────────────────────────────────
+  // Shows all custom roles in sort_order, with member count per role.
+  // Clicking a role name navigates to Roles & Permissions to edit it.
+  const hierEl=document.getElementById('users-hierarchy-strip');
+  if(hierEl && S.customRoles?.length){
+    const sorted=[...S.customRoles].sort((a,b)=>a.sort_order-b.sort_order);
+    hierEl.innerHTML=`
+      <div class="card mb-4" style="overflow:hidden;">
+        <div class="card-header" style="padding:12px 16px;">
+          <span class="card-title" style="font-size:13.5px;"><i class="fas fa-sitemap" style="color:var(--gold);"></i> Team Hierarchy</span>
+          <button class="btn btn-outline btn-sm" onclick="navigate('roles')" style="font-size:11.5px;">
+            <i class="fas fa-edit"></i> Edit Roles & Permissions
+          </button>
+        </div>
+        <div style="display:flex;align-items:stretch;overflow-x:auto;">
+          ${sorted.map((r,i)=>{
+            const count=S.users.filter(u=>u.custom_role_id===r.id&&!u.archived).length;
+            const perms=r.permissions||{};
+            const permCount=Object.values(perms).filter(v=>v===true).length;
+            return `<div style="flex:1;min-width:130px;padding:12px 14px;
+              border-right:${i<sorted.length-1?'1px solid var(--border-light)':'none'};
+              background:${i===0?'var(--gold-pale)':'var(--bg)'};text-align:center;">
+              <div style="font-size:12px;font-weight:700;color:var(--navy);">${escHtml(r.name)}</div>
+              <div style="font-size:22px;font-weight:700;color:var(--navy);margin:4px 0;">${count}</div>
+              <div style="font-size:11px;color:var(--text-muted);">member${count!==1?'s':''}</div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${permCount}/9 permissions</div>
+              ${i<sorted.length-1?`<div style="font-size:10px;color:var(--text-muted);margin-top:6px;">↓</div>`:''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  } else if(hierEl){
+    hierEl.innerHTML=`<div class="card mb-4"><div class="card-body">
+      <p class="text-muted text-sm">No custom roles defined yet. 
+      <span style="color:var(--navy-mid);cursor:pointer;text-decoration:underline;" onclick="navigate('roles')">Create roles in Admin → Roles & Permissions</span> to set up your team hierarchy.</p>
+    </div></div>`;
+  }
+
   const pendingSection=document.getElementById('users-pending-section');
   const pendingList=document.getElementById('users-pending-list');
   if(S.pendingUsers&&S.pendingUsers.length){
@@ -3272,6 +3349,12 @@ function loadSettingsUI(){
   document.getElementById('s-onedrive-client-id').value=localStorage.getItem('ld_onedrive_client_id')||'';
   updateOneDriveStatusUI();
   loadInvoiceSettingsUI();  // populate invoice settings fields if data already loaded
+  // Initialize chatbot toggle to reflect actual current state
+  const botToggle = document.getElementById('chatbot-toggle');
+  if(botToggle){
+    const isEnabled = isChatbotEnabled();
+    botToggle.classList.toggle('on', isEnabled);
+  }
   const resetRow=document.getElementById('reset-row');
   if(resetRow) resetRow.style.display=isAdmin()?'flex':'none';
   const migRow=document.getElementById('migration-check-row');
@@ -5318,7 +5401,7 @@ async function saveCustomRole(){
   Object.keys(PERMISSION_LABELS).forEach(key=>{
     perms[key]=document.getElementById(`perm-${key}`)?.checked||false;
   });
-  const payload={name,permissions:perms,updated_at:new Date().toISOString()};
+  const payload={name, permissions:perms};
   if(S._editingRoleId){
     const {error}=await sb.from('custom_roles').update(payload).eq('id',S._editingRoleId);
     if(error){showToast('Save failed: '+error.message,'error');return;}
@@ -5781,7 +5864,7 @@ function applyFinancesVisibility(){
     el.style.display = (isAdmin()||canViewFinances()) ? '' : 'none';
   });
 }
-
+</script>
 
 // ── UI aliases for HTML onclick handlers ──────────────────────────────────
 // These thin wrappers bridge HTML onclicks to the underlying functions.
@@ -5791,9 +5874,10 @@ function changePassword()       { doChangePassword(); }
 function setNewPasswordFromReset(){ doChangePassword(); }
 
 function toggleChatbotSetting(btn){
-  const enabled = btn.classList.toggle('active');
-  setChatbotEnabled(enabled);
-  showToast(enabled ? 'Chatbot enabled.' : 'Chatbot disabled.','info');
+  const nowEnabled = !btn.classList.contains('on');
+  btn.classList.toggle('on', nowEnabled);
+  setChatbotEnabled(nowEnabled);
+  showToast(nowEnabled ? 'Chatbot enabled.' : 'Chatbot disabled.', 'info');
 }
 
 // ── Group chat UI wrappers (called from modal HTML) ───────────────────────
@@ -5846,9 +5930,27 @@ async function leaveGroup(){
   renderChatContacts();
   showToast('You left the group.','info');
 }
-</script>
 
-  
+// ── Delete a group (admin of group only) ─────────────────────────────────
+async function deleteGroup(){
+  const groupId = S._managingGroupId;
+  if(!groupId){ showToast('No group selected.','error'); return; }
+  const group = S.chatGroups?.find(g=>g.id===groupId);
+  if(!confirm(`Delete group "${group?.name||'this group'}" permanently? All messages in this group will be lost.`)) return;
+  // Delete messages first (FK constraint)
+  await sb.from('messages').delete().eq('group_id', groupId);
+  // Delete members (cascade would handle this but be explicit)
+  await sb.from('group_members').delete().eq('group_id', groupId);
+  const {error} = await sb.from('chat_groups').delete().eq('id', groupId);
+  if(error){ showToast('Delete failed: '+error.message,'error'); return; }
+  closeModal('modal-group-settings');
+  S.activeGroupId = null;
+  S.activeChatPeer = null;
+  S._managingGroupId = null;
+  await loadChatGroups();
+  renderChatContacts();
+  showToast('Group deleted.','warning');
+}
 <script>
 // ════════════════════════════════════════════
 //  LEXDESK ASSISTANT — conversational chat UI

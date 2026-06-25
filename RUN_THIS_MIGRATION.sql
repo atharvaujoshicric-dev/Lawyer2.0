@@ -321,9 +321,12 @@ create table if not exists custom_roles (
   permissions jsonb not null default '{}',
   sort_order int default 99,
   created_by uuid references profiles(id),
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 alter table custom_roles enable row level security;
+-- Add updated_at if missing (for installs that ran an older version of this migration)
+alter table custom_roles add column if not exists updated_at timestamptz default now();
 drop policy if exists "croles_select" on custom_roles;
 create policy "croles_select" on custom_roles for select using (is_approved());
 drop policy if exists "croles_write" on custom_roles;
