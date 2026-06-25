@@ -444,3 +444,7 @@ where routine_schema='public'
     'user_in_group','user_is_group_admin'
   )
 order by routine_name;
+
+-- ── Per-user theme preference ──
+alter table profiles add column if not exists theme text default 'dark'
+  check (theme in ('dark','light'));
