@@ -1666,7 +1666,6 @@ function buildSidebar(){
   });
   html+=`<div class="nav-section-label">Workspace</div>
     <button class="nav-item" onclick="navigate('documents')"><i class="fas fa-folder-open"></i> Documents</button>
-    <button class="nav-item" onclick="navigate('finances')"><i class="fas fa-rupee-sign"></i> Finances</button>
     <button class="nav-item" onclick="navigate('templates')"><i class="fas fa-file-alt"></i> Templates</button>
     <button class="nav-item" onclick="navigate('notes')"><i class="fas fa-sticky-note"></i> Notes</button>
     <button class="nav-item" onclick="navigate('chat')"><i class="fas fa-comments"></i> Messages <span id="chat-nav-badge" class="nav-badge" style="display:none;"></span></button>
@@ -5782,13 +5781,14 @@ function applyFinancesVisibility(){
     el.style.display = (isAdmin()||canViewFinances()) ? '' : 'none';
   });
 }
-
+</script>
 
 // ── UI aliases for HTML onclick handlers ──────────────────────────────────
 // These thin wrappers bridge HTML onclicks to the underlying functions.
-  function forgotPassword()       { doForgotPassword(); }
-  function changePassword()       { doChangePassword(); }
-  function setNewPasswordFromReset(){ doChangePassword(); }
+
+function forgotPassword()       { doForgotPassword(); }
+function changePassword()       { doChangePassword(); }
+function setNewPasswordFromReset(){ doChangePassword(); }
 
 function toggleChatbotSetting(btn){
   const enabled = btn.classList.toggle('active');
@@ -5846,268 +5846,236 @@ async function leaveGroup(){
   renderChatContacts();
   showToast('You left the group.','info');
 }
-</script>
 <script>
 // ════════════════════════════════════════════
-//  LEXDESK ASSISTANT — comprehensive preset Q&A
-//  Draggable floating button, no API key.
-//  2-day localStorage clear. Settings toggle.
+//  LEXDESK ASSISTANT — conversational chat UI
+//  Preset Q&A knowledge base, feels like a real
+//  chat. Draggable. 2-day clear. Settings toggle.
 // ════════════════════════════════════════════
-const CHATBOT_KEY  = 'ld_bot_history';
-const CHATBOT_DATE = 'ld_bot_date';
+const BOT_KEY  = 'ld_bot_msgs';
+const BOT_DATE = 'ld_bot_date';
 
-const BOT_CATEGORIES = [
-  { id:'system',   icon:'fas fa-laptop-code',   label:'System Help' },
-  { id:'civil',    icon:'fas fa-balance-scale',  label:'Civil Law' },
-  { id:'criminal', icon:'fas fa-gavel',           label:'Criminal Law' },
-  { id:'cyber',    icon:'fas fa-shield-alt',      label:'Cyber Law' },
-  { id:'rental',   icon:'fas fa-home',            label:'Rental / Property' },
-  { id:'corp',     icon:'fas fa-building',        label:'Corporate Law' },
-  { id:'family',   icon:'fas fa-users',           label:'Family Law' },
-  { id:'labour',   icon:'fas fa-hard-hat',        label:'Labour Law' },
-  { id:'tax',      icon:'fas fa-receipt',         label:'Tax Law' },
-  { id:'ip',       icon:'fas fa-lightbulb',       label:'IP Law' },
-  { id:'const',    icon:'fas fa-landmark',        label:'Constitutional Law' },
-  { id:'consumer', icon:'fas fa-shopping-cart',   label:'Consumer Law' },
+// ── Knowledge base ────────────────────────────────────────────────────────
+// Each entry: { keywords:[], q:'...', a:'...' }
+// keywords are used for fuzzy matching when user types freely
+const BOT_KB = [
+  // SYSTEM
+  { cat:'System', keywords:['add client','new client','create client','client form'],
+    q:'How do I add a new client?',
+    a:'Tap <strong>New Client</strong> in the top bar. At the top of the form, enter the opposite party name — the system instantly checks for conflicts. Fill in the case type, client details, fee, and save. The system auto-generates a unique Client ID.' },
+  { cat:'System', keywords:['record payment','add payment','payment','fees received','paid'],
+    q:'How do I record a payment?',
+    a:'Two ways: open the client detail → <strong>Payments</strong> tab → Record Payment. Or go to <strong>Finances</strong> in the sidebar, expand the client row, and click Record Payment directly from there.' },
+  { cat:'System', keywords:['task','assign task','new task','workflow','in review','kanban'],
+    q:'How does the task workflow work?',
+    a:'The Senior Advocate creates tasks and assigns them. The flow is <strong>Open → In Progress → In Review → Approved</strong>. Assistants start work and send for review when done. The Senior Advocate can Approve, Rework, or Cancel. Fields lock once a task moves past Open.' },
+  { cat:'System', keywords:['portal','client link','client portal','share case','client login'],
+    q:'How do I give a client access to their case?',
+    a:'Open the client detail modal → click <strong>Portal Link</strong> in the footer. You get a unique URL and a 4-digit PIN. Share the link by email and the PIN by SMS — never both together. The client enters the PIN to see their case status, payments, and documents. No account needed. Valid 90 days.' },
+  { cat:'System', keywords:['invoice','generate invoice','pdf','bill','receipt'],
+    q:'How do I generate an invoice?',
+    a:'Open a client detail → click <strong>Invoice</strong> in the footer. A print-ready invoice opens in a new tab — use Print → Save as PDF. First fill in your firm details in <strong>Settings → Invoice Settings</strong>.' },
+  { cat:'System', keywords:['group chat','group','create group','new group','team chat'],
+    q:'How do I create a group chat?',
+    a:'Go to <strong>Messages</strong> → click <strong>New Group</strong> at the bottom. Name it, pick members. The Senior Advocate is automatically a group admin. Admins can rename, add, or remove members using the ⚙ icon.' },
+  { cat:'System', keywords:['planner','calendar','daily planner','schedule','agenda'],
+    q:'How does the Daily Planner work?',
+    a:'The <strong>Daily Planner</strong> shows a full monthly calendar. Colored dots mark days with events — red for deadlines, purple for tasks due, blue for hearings, gold for personal notes. Click any day to open that day\'s agenda on the right side and add timed notes.' },
+  { cat:'System', keywords:['deadline','court deadline','filing deadline','statute','limitation'],
+    q:'How do court deadline rules work?',
+    a:'Go to <strong>Admin → Deadline Rules</strong>. Rules like "Written Statement due 30 days after case creation" are pre-seeded with 18 common Indian statutes. Open any client → <strong>Deadlines tab</strong> to see all computed deadlines. Red = overdue, orange = within 30 days.' },
+  { cat:'System', keywords:['role','permission','hierarchy','junior','advocate','assistant','custom role'],
+    q:'How do I set up team roles and permissions?',
+    a:'Go to <strong>Admin → Roles</strong>. Create roles like "Junior Advocate" or "Senior Assistant" with individual permission toggles (view clients, add clients, assign tasks, view finances, etc.). Assign roles from the <strong>Users</strong> page.' },
+  { cat:'System', keywords:['archive','remove user','delete user','leave','team member'],
+    q:'How do I archive or remove a team member?',
+    a:'Go to <strong>Users</strong>. Archive (📦) removes access but keeps data — they can be restored. Permanently Remove (🗑) deletes their profile forever. The Founder (first signup) is protected and cannot be removed.' },
+  { cat:'System', keywords:['password','forgot password','reset password','change password','login issue'],
+    q:'How do I reset or change my password?',
+    a:'On the login screen, click <strong>Forgot Password?</strong> — enter your email and you\'ll get a reset link. You can also change your password anytime from <strong>Settings → Change Password</strong>.' },
+  { cat:'System', keywords:['conflict','opposite party','conflict check','clash','same client'],
+    q:'How does the conflict of interest checker work?',
+    a:'When adding a new client, type the opposite party\'s name in the conflict checker field at the top of the form. It instantly scans all existing clients and opposite-party fields and shows a red warning if there\'s a match.' },
+  { cat:'System', keywords:['note','share note','private note','team note','document note'],
+    q:'How do I share a note with a team member?',
+    a:'Go to <strong>Notes</strong> → open your note → click <strong>Share</strong>. Set them as Viewer or Editor. You can change or revoke access at any time. Check "Send chat message" to notify them instantly.' },
+  { cat:'System', keywords:['chatbot','bot','assistant','disable bot','enable bot'],
+    q:'How do I turn the chatbot on or off?',
+    a:'Go to <strong>Settings</strong> → find the Chatbot toggle and switch it off. The floating button disappears. Turn it back on the same way. Chat history clears automatically every 2 days.' },
+  { cat:'System', keywords:['finances','firm finances','payment tracker','balance','outstanding'],
+    q:'How does the Finances page work?',
+    a:'Visible to the Senior Advocate only. It shows firm-wide fee tracking with 3 summary cards (Total Fees, Collected, Outstanding). Every client has a payment progress bar. Expand any row to see the full ledger and record new payments.' },
+  { cat:'System', keywords:['document','upload file','documents section','filter document'],
+    q:'How do I manage documents?',
+    a:'Go to <strong>Documents</strong> in the sidebar. Use the <strong>Client filter</strong> dropdown to show only documents for a specific client. Upload files from inside a client detail modal under the <strong>Documents tab</strong>.' },
+  { cat:'System', keywords:['template','document template','use template','variable','placeholder'],
+    q:'How do document templates work?',
+    a:'Go to <strong>Templates</strong> → New Template. Write your document with placeholders like <code>{{CLIENT_NAME}}</code> or <code>{{DATE}}</code>. You can add custom variables with labels. When clicking "Use Template", fill in those variables and the document generates with all values filled in.' },
+  { cat:'System', keywords:['activity','audit','log','changes','who changed','history'],
+    q:'Where can I see what changes were made?',
+    a:'Go to <strong>Admin → Activity Log</strong>. Every client created/updated (with exact field-by-field diffs), note created/shared, and permission change is recorded with who did it and when.' },
+  // CIVIL
+  { cat:'Civil Law', keywords:['limitation period','time limit','how long to file suit','when to file'],
+    q:'What are the limitation periods for civil suits?',
+    a:'Under the <strong>Limitation Act 1963</strong>: Contract breach — 3 years; Money recovery — 3 years; Immovable property recovery — 12 years; Mortgage redemption — 30 years; Tort/negligence — 3 years. Time runs from when the cause of action accrues. Section 5 allows condonation of delay for sufficient cause in most cases.' },
+  { cat:'Civil Law', keywords:['injunction','interim injunction','stay order','temporary injunction'],
+    q:'How do I get an interim injunction?',
+    a:'File an IA under <strong>Order XXXIX CPC</strong> with an affidavit proving three things: (1) <em>Prima facie case</em> — arguable merits; (2) <em>Balance of convenience</em> — your hardship > defendant\'s; (3) <em>Irreparable injury</em> — damages alone won\'t compensate. For ex-parte relief, show urgency. Breach of an injunction is contempt of court.' },
+  { cat:'Civil Law', keywords:['specific performance','contract enforcement','specific relief'],
+    q:'When can I enforce a contract specifically?',
+    a:'Under the <strong>Specific Relief Act 1963</strong> (amended 2018), specific performance of contracts is now <em>mandatory</em> in most cases — courts cannot refuse merely because damages are adequate. Exceptions: contracts requiring personal skill, those dependent on supervision over time, or where terms are too uncertain.' },
+  { cat:'Civil Law', keywords:['res judicata','same case twice','re-litigation','same issue'],
+    q:'What is res judicata?',
+    a:'<strong>Section 11 CPC</strong> bars re-litigation of issues finally decided between the same parties by a competent court. <strong>Constructive res judicata</strong> (Explanation IV) also bars issues that <em>ought to have been raised</em> but weren\'t in the former suit — prevents piecemeal litigation.' },
+  { cat:'Civil Law', keywords:['civil suit procedure','how to file suit','plaint','summons'],
+    q:'What is the procedure for filing a civil suit?',
+    a:'(1) Draft plaint (Order VII CPC) — parties, cause of action, relief, valuation; (2) File with court fees; (3) Court issues summons; (4) Defendant files Written Statement within 30 days (up to 90 days maximum); (5) Issues are framed; (6) Evidence — examination, cross-examination; (7) Arguments; (8) Judgment and decree.' },
+  // CRIMINAL
+  { cat:'Criminal Law', keywords:['bnss','bns','bsa','new criminal law','2024 law','bharatiya'],
+    q:'What changed with BNS, BNSS and BSA in 2024?',
+    a:'Three new codes replaced colonial laws from <strong>July 1, 2024</strong>: <strong>Bharatiya Nyaya Sanhita (BNS)</strong> replaces IPC; <strong>Bharatiya Nagarik Suraksha Sanhita (BNSS)</strong> replaces CrPC; <strong>Bharatiya Sakshya Adhiniyam (BSA)</strong> replaces the Evidence Act. Key changes: Zero FIR filing anywhere, 7-day police custody in tranches, mandatory video recording of searches, and trial in absentia.' },
+  { cat:'Criminal Law', keywords:['bail','non bailable','apply for bail','bail application'],
+    q:'How do I apply for bail in a non-bailable offence?',
+    a:'Under <strong>Section 480 BNSS</strong>: file application before the Magistrate, Sessions Court, or High Court with a supporting affidavit. The court considers gravity of offence, criminal history, flight risk, and tampering risk. <strong>Anticipatory bail (Section 482 BNSS)</strong> can be applied for before any arrest when you apprehend arrest.' },
+  { cat:'Criminal Law', keywords:['fir','first information report','register fir','police complaint'],
+    q:'When must an FIR be registered?',
+    a:'For <strong>cognizable offences</strong>, police <em>must</em> register an FIR — they cannot refuse (<em>Lalita Kumari v UP, 2013</em>). If refused: send written complaint to SP by speed post, or file a complaint directly before a Magistrate. BNSS also introduces <strong>Zero FIR</strong> — file at any station regardless of jurisdiction.' },
+  { cat:'Criminal Law', keywords:['rights arrested','arrested person rights','custody rights','police custody'],
+    q:'What are the rights of an arrested person?',
+    a:'Under Article 22 + BNSS: (1) Right to know grounds of arrest; (2) Right to consult a lawyer; (3) Right to be produced before Magistrate within 24 hours; (4) Right against self-incrimination (Article 20(3)); (5) Right to inform a friend/relative; (6) Right to medical examination; (7) D.K. Basu safeguards — no torture, arrest memo with witness signature.' },
+  { cat:'Criminal Law', keywords:['ndps','drug','narcotic','substance','possession'],
+    q:'What are the key provisions of the NDPS Act?',
+    a:'<strong>NDPS Act 1985</strong>: Bail is nearly impossible at commercial quantity level — Section 37 requires the court to be "satisfied" there are reasonable grounds the accused is not guilty. Small quantity: bail possible. Commercial quantity: 10-20 years + fine. Offences are cognizable, non-bailable. Section 35/54 creates a presumption — once possession is proved, accused must prove innocence.' },
+  // CYBER
+  { cat:'Cyber Law', keywords:['it act','cyber offence','hacking','computer crime'],
+    q:'What are the key offences under the IT Act 2000?',
+    a:'Section 43: Unauthorized access/damage — civil penalty up to ₹1 crore. Section 66: Hacking — 3 years + ₹5 lakh. Section 66C/D: Identity theft, cheating by personation — 3 years. Section 66E: Privacy violation (private images) — 3 years. Section 66F: Cyber terrorism — life imprisonment. Section 67A/B: Sexually explicit material, child abuse material — 5-7 years.' },
+  { cat:'Cyber Law', keywords:['cert-in','cert in','reporting incident','cybersecurity report','6 hours'],
+    q:'What are the CERT-In reporting obligations?',
+    a:'Under <strong>CERT-In Directions 2022</strong>: 20 categories of cybersecurity incidents must be reported within <strong>6 hours</strong> of detection — not 24 or 72 hours. Organizations must maintain ICT logs for 180 days within India. VPN/Cloud providers must keep subscriber records for 5 years. Non-compliance: prosecution under Section 70B(7) IT Act.' },
+  { cat:'Cyber Law', keywords:['dpdp','data protection','privacy law','personal data','data breach'],
+    q:'What is the DPDP Act 2023?',
+    a:'<strong>Digital Personal Data Protection Act 2023</strong> — India\'s first comprehensive privacy law. Key duties: lawful basis for processing, purpose limitation, security safeguards, breach notification to Data Protection Board. Significant Data Fiduciaries must appoint a DPO and conduct DPIAs. Penalties up to ₹250 crore per violation.' },
+  { cat:'Cyber Law', keywords:['ransomware','cyber attack','data breach response','hack response'],
+    q:'What are the legal steps after a ransomware attack?',
+    a:'(1) Report to <strong>CERT-In within 6 hours</strong> — mandatory; (2) Notify RBI within 2-6 hours if you\'re a financial institution; (3) Preserve logs and forensic evidence — do NOT pay ransom without legal advice; (4) File FIR under Section 66 IT Act + BNS extortion provisions; (5) Root cause analysis to CERT-In within 30 days; (6) Notify cyber insurer.' },
+  { cat:'Cyber Law', keywords:['cyber fraud','online fraud','financial fraud','upi fraud','1930'],
+    q:'What do I do after online financial fraud?',
+    a:'(1) Call <strong>1930</strong> (National Cybercrime Helpline) within minutes; (2) File at cybercrime.gov.in; (3) Inform your bank immediately to freeze the destination account; (4) File FIR at nearest Cyber Crime Cell. Quick reporting (within 30 minutes) significantly improves chances of fund recovery through the CFCFRS system.' },
+  // RENTAL
+  { cat:'Rental Law', keywords:['evict tenant','eviction','remove tenant','vacate','possession'],
+    q:'How do I evict a tenant legally?',
+    a:'(1) Issue <strong>legal notice</strong> — 15 days for month-to-month tenancy (Section 106 TPA); (2) If no vacation, file eviction suit before the Rent Control Court or Civil Court; (3) Grounds: non-payment, bonafide personal need, unauthorized subletting, misuse, expiry of term; (4) Court issues eviction decree and sends a Bailiff for possession. State laws vary — Karnataka, Maharashtra, Delhi each have specific Rent Acts.' },
+  { cat:'Rental Law', keywords:['rent agreement','rental agreement','lease','leave and licence','what to include'],
+    q:'What should a rent agreement include?',
+    a:'Essential clauses: parties and property details; monthly rent and due date; security deposit and return conditions; lock-in period; notice period for termination; permitted use; maintenance responsibilities; subletting prohibition; rent escalation (typically 5-10% annually). Agreements over 11 months must be registered. Most landlords keep it at 11 months to avoid registration and maintain clear eviction rights.' },
+  { cat:'Rental Law', keywords:['security deposit','deposit limit','deposit state','deposit rules'],
+    q:'What are the security deposit limits by state?',
+    a:'<strong>Karnataka</strong> — max 10 months rent. <strong>Tamil Nadu</strong> — max 5 months. <strong>AP/Telangana</strong> — max 2 months. <strong>Maharashtra/Delhi</strong> — no statutory cap, market practice is 1-3 months. Deposit must be refunded within the agreed period (typically 30-45 days after vacating) minus itemised deductions for damage beyond normal wear and tear.' },
+  // CORPORATE
+  { cat:'Corporate Law', keywords:['incorporate company','start company','pvt ltd','register company'],
+    q:'How do I incorporate a Private Limited Company?',
+    a:'(1) Get DSC for directors; (2) Apply for DIN; (3) Reserve name via RUN on MCA portal; (4) File <strong>SPICe+ (INC-32)</strong> with MOA, AOA; (5) Certificate of Incorporation issued with CIN, PAN, TAN; (6) Open bank account; (7) File INC-20A within 180 days. Timeline: 5-7 working days. Cost: ₹2,000-15,000 government fees + professional charges.' },
+  { cat:'Corporate Law', keywords:['ibc','insolvency','nclt','bankruptcy','resolution'],
+    q:'How does the IBC insolvency process work?',
+    a:'<strong>IBC 2016 CIRP</strong>: Application by financial creditor, operational creditor, or the company itself to NCLT (minimum default ₹1 crore). IRP appointed, moratorium declared. Committee of Creditors (CoC) formed. Resolution plan must be submitted and approved by <strong>66% of CoC votes</strong> within 180 days (extendable to 330). If no plan — liquidation. The CoC\'s commercial wisdom is paramount (<em>Essar Steel 2019</em>).' },
+  { cat:'Corporate Law', keywords:['shareholders agreement','sha','tag along','drag along','investor rights'],
+    q:'What are the key clauses in a Shareholders Agreement?',
+    a:'Key SHA clauses: <strong>Pre-emption rights</strong> (existing shareholders get first offer); <strong>Tag-along</strong> (minority joins majority\'s exit on same terms); <strong>Drag-along</strong> (majority can compel minority to sell); <strong>Anti-dilution</strong> (protects investor in down-rounds); <strong>Affirmative vote matters</strong> (decisions requiring investor consent); <strong>Liquidation preference</strong>.' },
+  // FAMILY
+  { cat:'Family Law', keywords:['divorce','grounds divorce','hindu marriage','petition divorce'],
+    q:'What are the grounds for divorce under the Hindu Marriage Act?',
+    a:'<strong>Section 13 HMA</strong> fault grounds: adultery, cruelty (physical or mental), desertion ≥2 years, conversion, unsoundness of mind ≥3 years, incurable leprosy, communicable venereal disease, renunciation, presumption of death (7 years). <strong>Section 13B mutual consent</strong>: file after 1 year of marriage, 6-month cooling period (waivable if marriage is irretrievably broken per <em>Amardeep Singh 2017</em>).' },
+  { cat:'Family Law', keywords:['maintenance','alimony','spouse support','section 125'],
+    q:'How is maintenance determined?',
+    a:'<strong>Section 144 BNSS</strong> (formerly 125 CrPC): Magistrate can award maintenance to wife, children, and parents — no cap, based on means and needs. <strong>Section 24 HMA</strong>: interim maintenance during proceedings. <strong>Section 25 HMA</strong>: permanent alimony. <em>Rajnesh v Neha (2020)</em>: SC mandated uniform disclosure of assets and a factor-based formula (income, standard of living, children, wife\'s earning capacity).' },
+  { cat:'Family Law', keywords:['custody','child custody','guardian','minor children'],
+    q:'How is child custody decided?',
+    a:'<strong>Paramount principle</strong>: best interests of the child. Below 5 years, mother is generally preferred. Courts weigh: child\'s wishes (if old enough), emotional bond with each parent, each parent\'s financial and emotional capacity, continuity of schooling. Courts increasingly grant <strong>joint physical custody</strong>. Habeas corpus before HC for immediate production of a wrongfully withheld child.' },
+  { cat:'Family Law', keywords:['domestic violence','dv act','protection order','pwdva'],
+    q:'What does the Domestic Violence Act protect?',
+    a:'<strong>PWDVA 2005</strong> protects women in domestic relationships from physical, sexual, verbal, emotional, and economic abuse. Available reliefs: Protection Order, Residence Order (right to stay in shared home), Monetary Relief, Custody Order, Compensation. Emergency relief is available within 24-48 hours. Violation of a Protection Order is a criminal offence.' },
+  // LABOUR
+  { cat:'Labour Law', keywords:['wrongful termination','illegal termination','fired illegally','retrenchment'],
+    q:'What constitutes wrongful termination?',
+    a:'Termination is wrongful if it violates: (1) <strong>Section 25F IDA</strong> — retrenchment in establishments ≥100 workers requires 1 month notice, 15 days\' compensation per year of service, government permission; (2) Standing Orders — prescribed misconduct procedure (show cause, inquiry, findings); (3) Natural justice — right to be heard; (4) Anti-discrimination laws. Remedies: reinstatement + full back wages from Labour Court.' },
+  { cat:'Labour Law', keywords:['posh','sexual harassment','workplace harassment','icc','complaint'],
+    q:'What are the POSH Act obligations?',
+    a:'<strong>POSH Act 2013</strong> applies to ALL establishments. Employers must: constitute an <strong>ICC</strong> (Internal Complaints Committee) with at least 4 members including an external member; display the policy; run awareness programmes. ICC inquiry must complete within <strong>90 days</strong>. Non-constitution of ICC: penalty ₹50,000, double for repeat + licence cancellation.' },
+  { cat:'Labour Law', keywords:['epf','esic','pf','provident fund','esi'],
+    q:'What are EPF and ESI compliance obligations?',
+    a:'<strong>EPF</strong> applies to establishments ≥20 employees. Employee contributes 12% of basic+DA; Employer contributes 12% (8.33% → Pension, 3.67% → EPF). <strong>ESI</strong> applies to ≥10 employees where wages ≤ ₹21,000/month. Employee pays 0.75%, Employer pays 3.25%. ESI covers medical, sickness, maternity, disablement, and death benefits. Non-compliance attracts damages, interest, and criminal prosecution.' },
+  // TAX
+  { cat:'Tax Law', keywords:['gst legal services','gst advocate','gst lawyer','rcm'],
+    q:'What GST applies to legal services?',
+    a:'Advocates to <strong>business entities</strong>: <strong>18% GST under Reverse Charge Mechanism (RCM)</strong> — the business client pays GST to the government directly, the advocate doesn\'t collect it. Advocates to <strong>individuals</strong>: exempt. Advocates to other advocates (joint cases): exempt. Senior Advocates to law firms/advocates: 18% forward charge (they collect it).' },
+  { cat:'Tax Law', keywords:['income tax advocate','professional tax','section 44ada','presumptive'],
+    q:'How are advocates taxed on income?',
+    a:'(1) <strong>Section 44ADA</strong>: if turnover ≤ ₹75 lakh, 50% is deemed profit — no books of accounts required. (2) Above ₹75 lakh: maintain books + tax audit under Section 44AB. (3) <strong>TDS Section 194J</strong>: companies/firms deduct 10% TDS on fees paid to advocates. (4) Advance tax: quarterly instalments in June, September, December, March. Chambers rent, clerk salaries, library, and travel are all deductible expenses.' },
+  { cat:'Tax Law', keywords:['capital gains','property sale tax','shares tax','ltcg','stcg'],
+    q:'What are the capital gains tax rules after Budget 2024?',
+    a:'<strong>Budget 2024 changes</strong>: STCG on listed equity/MF: increased to <strong>20%</strong> (was 15%). LTCG on listed equity/MF: increased to <strong>12.5%</strong> above ₹1.25 lakh exemption (was 10% above ₹1 lakh). LTCG on immovable property: <strong>12.5% without indexation</strong> (indexation benefit removed). Reinvestment exemptions: Section 54 (residential property, ₹10 crore cap), Section 54EC (bonds, ₹50 lakh cap).' },
+  // IP
+  { cat:'IP Law', keywords:['trademark','register trademark','brand name','logo'],
+    q:'How do I register a trademark in India?',
+    a:'File TM-A on IP India portal in the relevant Nice Classification class. After examination, the accepted mark is published in the Trade Marks Journal with a <strong>4-month opposition window</strong>. If no opposition, registration certificate is issued. Valid <strong>10 years, infinitely renewable</strong>. Cost: ₹4,500 (e-filing, small entity) to ₹9,000 (large entity) per class. Timeline: 18-24 months.' },
+  { cat:'IP Law', keywords:['copyright','creative work','literary work','copyright duration','original work'],
+    q:'How long does copyright protection last?',
+    a:'<strong>Copyright Act 1957</strong>: automatically on creation — no registration needed. Duration: author\'s lifetime + <strong>60 years</strong>. Court judgments and statutes are not copyrightable (Section 52(1)(q)). Registration at the Copyright Office (optional) provides prima facie evidence of ownership. Fair dealing for research, criticism, and education is permitted.' },
+  { cat:'IP Law', keywords:['patent','invention','20 years','patent india','new invention'],
+    q:'How does patent protection work in India?',
+    a:'<strong>Patents Act 1970</strong>: protects new, inventive, industrially applicable inventions for <strong>20 years</strong>. Not patentable: discoveries, mathematical methods, business methods, computer programs per se, medical treatments, traditional knowledge. File complete specification at Patent Office → publication after 18 months → examination → grant/refusal. India is a PCT signatory for international applications.' },
+  // CONSTITUTIONAL
+  { cat:'Constitutional', keywords:['fundamental rights','article 21','right to life','part iii'],
+    q:'What are the key Fundamental Rights?',
+    a:'<strong>Part III Constitution</strong>: Article 14 — equality (includes arbitrariness doctrine); Article 19 — six freedoms including speech, movement, profession (subject to reasonable restrictions); Article 20 — protection against double jeopardy, self-incrimination, ex post facto laws; Article 21 — right to life and personal liberty (expanded to include privacy, dignity, health, livelihood by the Supreme Court); Article 32 — right to move the SC for enforcement.' },
+  { cat:'Constitutional', keywords:['writ','habeas corpus','mandamus','certiorari','prohibition','quo warranto'],
+    q:'What are the five writs under the Constitution?',
+    a:'(1) <strong>Habeas Corpus</strong> — challenges illegal detention; most urgent, no locus standi restriction; (2) <strong>Mandamus</strong> — compels a public authority to perform its duty; (3) <strong>Prohibition</strong> — prevents an inferior court from exceeding jurisdiction; (4) <strong>Certiorari</strong> — quashes an already passed order for excess of jurisdiction or violation of natural justice; (5) <strong>Quo Warranto</strong> — challenges a person\'s right to hold public office.' },
+  // CONSUMER
+  { cat:'Consumer Law', keywords:['consumer complaint','consumer forum','district forum','consumer court'],
+    q:'How do I file a consumer complaint?',
+    a:'(1) Optionally send a legal notice first; (2) File on <strong>e-daakhil.nic.in</strong> or physically at the appropriate Commission; (3) Pecuniary jurisdiction: District Commission up to ₹50 lakh, State up to ₹2 crore, NCDRC above ₹2 crore; (4) Attach bills, receipts, correspondence; (5) Pay nominal fee; (6) Commission attempts mediation first, then proceeds to evidence and arguments; (7) Remedies include replacement, refund, compensation, and punitive damages up to ₹10 lakh.' },
+  { cat:'Consumer Law', keywords:['consumer rights','what rights consumer','cpa 2019'],
+    q:'What are the key consumer rights under CPA 2019?',
+    a:'<strong>Consumer Protection Act 2019</strong>: Right to safety, information, choice, be heard, redressal, and education. New additions: regulation of e-commerce (mandatory disclosure of all charges), strict product liability (manufacturer/seller liable for defective products), unfair contracts are void. The <strong>CCPA</strong> has suo motu powers, can recall products, and initiate class action complaints.' },
 ];
 
-const BOT_QA = {
+// ── Greeting suggestions shown initially ─────────────────────────────────
+const BOT_SUGGESTIONS = [
+  'How do I add a client?',
+  'How does the task workflow work?',
+  'What are the limitation periods for civil suits?',
+  'How do I get an interim injunction?',
+  'How does bail work in non-bailable offences?',
+  'What is the DPDP Act 2023?',
+  'How do I evict a tenant?',
+  'How are advocates taxed?',
+];
 
-  // ── SYSTEM HELP ──────────────────────────────────────────────────────────
-  system: [
-    { q:'How do I add a new client?',
-      a:'Click the gold <strong>New Client</strong> button in the top bar. The form opens with a <strong>Conflict of Interest Check</strong> at the top — type the opposite party name to instantly flag matches. Select case type, fill in client details, set the agreed fee, and save. The system auto-generates a unique Client ID.' },
-    { q:'How do I record a payment from a client?',
-      a:'Two ways: (1) Open the client\'s detail modal → <strong>Payments tab</strong> → Record Payment. (2) <strong>Finances page</strong> in the sidebar → expand the client row → Record Payment. Each entry records amount, date, method (Cash/UPI/NEFT/Cheque), and an optional reference note.' },
-    { q:'How does the task workflow work?',
-      a:'The Senior Advocate creates tasks and assigns them. Flow: <strong>Open → In Progress → In Review → Approved / Rework</strong>. Assistants click "Start Work" then "Send for Review" when done. The Senior Advocate sees it in the In Review column and can Approve & Close, Send Back for Rework, or Cancel. Fields lock once the task moves past Open.' },
-    { q:'How does the Daily Planner work?',
-      a:'The <strong>Daily Planner</strong> shows a full monthly grid. Colored dots mark days with events: red = deadline/overdue, purple = task due, blue = hearing/court date, gold = personal note. Click any day to open the detail panel — it shows the auto-pulled agenda from your cases and lets you add personal timed notes.' },
-    { q:'How do I generate a client portal link?',
-      a:'Open a client\'s detail modal → click <strong>Portal Link</strong> in the footer. This generates a unique URL and a 4-digit PIN. <strong>Security tip:</strong> share the link via email and the PIN via SMS — never both in the same message. The client opens the link, enters the PIN, and sees their case status, payments, and documents. No LexDesk account needed. Valid 90 days.' },
-    { q:'How do I generate an invoice?',
-      a:'Open a client\'s detail modal → click <strong>Invoice</strong> in the footer. A print-ready invoice opens in a new tab — use browser Print → Save as PDF. First configure your firm details in <strong>Settings → Invoice Settings</strong>: firm name, address, bar number, footer text. Invoice numbers auto-increment.' },
-    { q:'How do I create a group chat?',
-      a:'Go to <strong>Messages</strong> → click <strong>New Group</strong> at the bottom of the contact list. Name the group and select members. The Senior Advocate is automatically added as group admin. Group admins can rename the group and add/remove members using the ⚙ gear icon next to the group name.' },
-    { q:'How do I add and use document templates?',
-      a:'Go to <strong>Templates</strong> → New Template. Write your document using placeholders like <code>{{CLIENT_NAME}}</code>, <code>{{DATE}}</code>, <code>{{COURT_NAME}}</code>. You can also add custom variables with labels (e.g., "Hearing Date", "Case Number"). When clicking "Use Template", a form appears to fill in those variables before the document generates.' },
-    { q:'How do court deadline rules work?',
-      a:'Go to <strong>Admin → Deadline Rules</strong>. Rules are pre-seeded with 18 common Indian rules (CPC, CrPC, Limitation Act, CERT-In, DPDP, TPA). Each rule says "X days after/before [field]". Open any client\'s detail → <strong>Deadlines tab</strong> — the system auto-computes all applicable deadlines from that client\'s case dates. Red = overdue, orange = due within 30 days.' },
-    { q:'How do I create custom roles and assign them?',
-      a:'Go to <strong>Admin → Roles</strong>. Create roles like "Junior Advocate" or "Senior Assistant" and toggle 9 individual permissions (view all clients, add clients, delete clients, assign tasks, view finances, manage users, export, etc.). Assign roles from the <strong>Users</strong> page by editing any team member.' },
-    { q:'How do I archive or permanently remove a team member?',
-      a:'Go to <strong>Users</strong>. Each active team member has: (1) Archive button (📦) — removes access but preserves data, restorable; (2) Permanent Remove button — deletes their profile permanently, cannot be undone. The Founder (first signup) is protected and can never be removed or archived.' },
-    { q:'How does the conflict of interest checker work?',
-      a:'The conflict checker is built into the Add Client form. As you type the opposite party\'s name, it instantly scans all existing clients and their "opposite party" fields. If a match is found, a red warning card shows with links to the conflicting matters. You can proceed if it\'s not an actual conflict, but the warning is documented.' },
-    { q:'How do I share notes with a team member?',
-      a:'Go to <strong>Notes</strong> → open your note → click <strong>Share</strong>. Select a team member and choose Viewer (read-only) or Editor (can modify). You can change or revoke access at any time from the same Share dialog. Optionally tick "Send chat message" to notify them instantly via the Messages feature.' },
-    { q:'How does forgot password work?',
-      a:'On the login screen, click <strong>Forgot Password?</strong>. Enter your email — Supabase sends a reset link to your inbox. Clicking the link opens LexDesk with a Change Password prompt. You can also change your password anytime from <strong>Settings → Change Password</strong>.' },
-    { q:'How do I set up invoice settings?',
-      a:'Go to <strong>Settings → Invoice Settings</strong>. Fill in your firm name, address, phone, email, bar registration number, invoice number prefix (e.g. "INV" or "LEX"), and a footer message (e.g. "Thank you for your trust."). These details appear on every PDF invoice you generate. Settings are saved immediately.' },
-    { q:'How does the activity log work?',
-      a:'The <strong>Activity Log</strong> (Admin → Activity Log) records every client created, client field updated (with exact field-level diffs showing what changed from what to what), note created/edited/shared, and permission changes. Senior Advocate sees all client entries; note owners see their own note history.' },
-    { q:'How do I disable the chatbot?',
-      a:'Go to <strong>Settings</strong> → scroll to the Chatbot section → toggle it off. The floating button disappears. Re-enable anytime from the same setting. Chatbot conversation history clears automatically every 2 days.' },
-    { q:'How does the Finances page work?',
-      a:'<strong>Finances</strong> (visible to Senior Advocate only) shows firm-wide fee tracking. Three summary cards: Total Fees Quoted, Total Collected, Outstanding Balance. Below, every client is listed with a payment progress bar and Paid/Partial/Unpaid badge. Click any client row to expand the full dated ledger and record new payments directly.' },
-  ],
+// ── State ─────────────────────────────────────────────────────────────────
+let _botOpen = false;
 
-  // ── CIVIL LAW ────────────────────────────────────────────────────────────
-  civil: [
-    { q:'What are the limitation periods for common civil suits?',
-      a:'Under the <strong>Limitation Act, 1963</strong>: Contract breach — 3 years from breach; Money recovery — 3 years; Tort/negligence — 3 years; Recovery of immovable property — 12 years; Mortgage redemption — 30 years; Declaring title to property — 12 years. The period runs from when the cause of action accrues. Section 5 allows condonation of delay for sufficient cause in most cases (not for suits challenging decrees).' },
-    { q:'What is the procedure for filing a civil suit?',
-      a:'(1) Draft plaint (Order VII CPC) — parties, facts, cause of action, relief sought, court fee valuation; (2) File with court fee stamps; (3) Court issues summons (Order V); (4) Defendant files Written Statement within 30 days (extendable to 90 days — Order VIII Rule 1); (5) Framing of issues; (6) Evidence — examination-in-chief, cross, re-examination; (7) Final arguments; (8) Judgment and decree (Order XX). If decreed, execute under Order XXI.' },
-    { q:'How do I obtain an interim injunction?',
-      a:'Under <strong>Order XXXIX CPC</strong>. File IA with affidavit. Three requirements: (1) <em>Prima facie case</em> — arguable merits; (2) <em>Balance of convenience</em> — your hardship if refused > defendant\'s hardship if granted; (3) <em>Irreparable injury</em> — damages inadequate. For ex-parte (without notice), show urgency. The court in <em>Dalpat Kumar v Prahlad Singh (AIR 1992 SC 1620)</em> confirmed all three must coexist. Breach of injunction order is punishable as contempt.' },
-    { q:'What is res judicata and constructive res judicata?',
-      a:'<strong>Section 11 CPC</strong>: Bars re-litigation of issues already finally decided between the same parties by a competent court. Requirements: (1) same matter directly in issue; (2) same parties; (3) competent court; (4) heard and finally decided. <strong>Constructive res judicata</strong> (Explanation IV): bars issues that <em>ought to have been raised</em> but weren\'t in the former suit — prevents piecemeal litigation.' },
-    { q:'What is the Specific Relief Act and when does it apply?',
-      a:'<strong>Specific Relief Act, 1963</strong> (amended 2018): (1) <strong>Specific performance</strong> of contracts (Section 10 — now <em>mandatory</em> in most cases, courts cannot refuse merely because damages are adequate); (2) Rectification/cancellation of instruments; (3) Declaratory relief; (4) Injunctions. Post-2018, specific performance is the rule, not exception. Exceptions: contracts requiring personal skill, supervision over time, or where terms are too uncertain.' },
-    { q:'What are the types of decrees and how are they executed?',
-      a:'Types: Preliminary decree (determines rights, execution follows), Final decree (completely disposes of suit), Part preliminary/part final. <strong>Execution (Order XXI)</strong>: modes — attachment and sale of property (movable/immovable), arrest and detention of judgment debtor, appointment of receiver, partition. Application for execution must be filed within 12 years (Article 136 Limitation Act). Objections by third parties under Order XXI Rule 58.' },
-    { q:'What is the difference between a suit and an application?',
-      a:'A <strong>suit</strong> is an original proceeding where a party claims a right against another — plaint, summons, full trial, decree. An <strong>application</strong> is an interlocutory or miscellaneous proceeding within or ancillary to a suit or appeal — no plaint, addressed to the court by notice. Applications under Section 9 Arbitration Act, Section 34 (challenging award), Order XXXIX (injunction), Order XXVI (commission) are examples.' },
-    { q:'What is summary procedure under Order XXXVII?',
-      a:'<strong>Order XXXVII CPC</strong> — Summary Suits: Available for suits on bills of exchange, hundies, promissory notes, or suits based on written contracts where defendant has no defence. Plaintiff files summary suit. Defendant must apply for leave to defend within 10 days of service. If leave refused, decree immediately. If leave granted, case proceeds as ordinary suit. Much faster than regular suit.' },
-  ],
-
-  // ── CRIMINAL LAW ─────────────────────────────────────────────────────────
-  criminal: [
-    { q:'What is the difference between BNS, BNSS and BSA (2024 laws)?',
-      a:'Three new codes replaced colonial-era laws from <strong>July 1, 2024</strong>: (1) <strong>Bharatiya Nyaya Sanhita (BNS), 2023</strong> replaces IPC 1860 — defines crimes and punishments; (2) <strong>Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023</strong> replaces CrPC 1973 — investigation, trial, bail, sentencing procedure; (3) <strong>Bharatiya Sakshya Adhiniyam (BSA), 2023</strong> replaces Indian Evidence Act 1872 — rules of evidence. Key changes: 7-day police custody in tranches (BNSS), zero FIR filing anywhere, trial-in-absentia, mandatory video recording of search/seizure.' },
-    { q:'What are the rights of an arrested person?',
-      a:'Under Article 22 Constitution + BNSS: (1) Right to be informed of grounds of arrest immediately; (2) Right to consult a lawyer of choice; (3) Right to be produced before Magistrate within 24 hours; (4) Right against self-incrimination (Article 20(3)); (5) Right to inform one friend/relative (Section 50A CrPC/BNSS); (6) Medical examination of arrested person on request; (7) D.K. Basu rights (1997 SC) — no torture, identification memo, arrest memo signed by witness. Women can only be arrested after sunset in exceptional circumstances with female officer present.' },
-    { q:'How do I apply for bail in a non-bailable offence?',
-      a:'Under <strong>Section 480 BNSS</strong> (formerly 437/439 CrPC): (1) Before Magistrate (first time) or Sessions Court/High Court (Section 483 BNSS); (2) Application with affidavit stating grounds; (3) Court considers: gravity of offence, criminal antecedents, flight risk, tampering risk, public order; (4) Conditions commonly imposed: regular reporting, surrendering passport, not leaving jurisdiction. <strong>Anticipatory bail (Section 482 BNSS)</strong>: apply in advance when apprehending arrest — file before Sessions Court or HC; protection operates on actual arrest.' },
-    { q:'When must an FIR be registered?',
-      a:'Under Section 173 BNSS (formerly 154 CrPC), for <strong>cognizable offences</strong> police <em>must</em> register FIR — they cannot refuse. <em>Lalita Kumari v UP (2013)</em> (SC Constitution Bench): FIR registration is <em>mandatory</em> for cognizable offences. If police refuse: (1) Send written complaint to SP by speed post; (2) File complaint directly before Magistrate under Section 175 BNSS; (3) File writ of mandamus. BNSS also introduces <strong>Zero FIR</strong> — file at any police station regardless of jurisdiction, which transfers it to the correct station.' },
-    { q:'What is the NDPS Act and its key provisions?',
-      a:'<strong>Narcotic Drugs and Psychotropic Substances Act, 1985</strong>: (1) Prohibits production, manufacture, transport, sale, possession of narcotic drugs/psychotropic substances; (2) Quantities matter: small quantity (bail possible), commercial quantity (minimum 10 years, up to 20 years + fine, stringent bail conditions under Section 37); (3) Offences are cognizable and non-bailable; (4) Bail nearly impossible at commercial quantity level — Section 37 requires court to be "satisfied" reasonable grounds exist for believing accused not guilty; (5) Intermediary presumption under Section 35/54 — accused must prove innocence once possession proven.' },
-    { q:'What is a charge sheet and when must it be filed?',
-      a:'A <strong>charge sheet (Section 193 BNSS)</strong> is the police final report after investigation. Must be filed: within <strong>60 days</strong> for offences punishable with imprisonment < 10 years; within <strong>90 days</strong> for offences with death/life/≥ 10 years imprisonment. If charge sheet not filed in time, accused entitled to "default bail" (Section 187 BNSS) — must apply before charge sheet is filed. Magistrate takes cognizance on charge sheet, frames charges, accused pleads, then trial begins.' },
-    { q:'What constitutes criminal conspiracy under BNS?',
-      a:'<strong>Section 61 BNS</strong> (formerly Section 120A-B IPC): Criminal conspiracy = agreement between two or more persons to do or cause an illegal act, or a legal act by illegal means. Agreement itself is the offence — no overt act needed (for conspiracy to commit offences with death/rigorous imprisonment ≥ 2 years). Conspiracy to commit any other offence requires an overt act. Punishment: same as the offence conspired, or up to 6 months where offence not expressly provided. Used extensively in economic offences, terrorism, organized crime.' },
-  ],
-
-  // ── CYBER LAW ────────────────────────────────────────────────────────────
-  cyber: [
-    { q:'What are the key offences under the IT Act, 2000?',
-      a:'<strong>Section 43</strong>: Civil penalty for unauthorized access/damage — up to ₹1 crore; <strong>Section 66</strong>: Hacking/computer offences — 3 years + ₹5 lakh fine; <strong>Section 66B/C/D</strong>: Receiving stolen computer resource, identity theft (3 years + ₹1 lakh), cheating by personation (3 years + ₹1 lakh); <strong>Section 66E</strong>: Privacy violation (capturing/publishing private images) — 3 years; <strong>Section 66F</strong>: Cyber terrorism — up to life imprisonment; <strong>Section 67A</strong>: Sexually explicit material online — 5 years first offence, 7 years repeat; <strong>Section 67B</strong>: Child sexual abuse material — 5 years (first), 7 years (repeat).' },
-    { q:'What are CERT-In mandatory reporting requirements?',
-      a:'Under <strong>CERT-In Directions 2022</strong>: 20 categories of cybersecurity incidents must be reported within <strong>6 hours</strong> of detection/noticing (not 24h or 72h). These include: data breaches, ransomware, phishing campaigns targeting government entities, unauthorized access to critical infrastructure. Organization must: (1) Report via CERT-In portal; (2) Maintain ICT logs for 180 days within India; (3) Sync system clocks with NTP servers traceable to NPL; (4) VPN/Cloud providers maintain subscriber records for 5 years. Penalty under Section 70B(7): imprisonment up to 1 year + fine.' },
-    { q:'What is the DPDP Act 2023 and its key obligations?',
-      a:'<strong>Digital Personal Data Protection Act, 2023</strong> — India\'s first comprehensive privacy law. Key obligations: (1) <strong>Lawful basis</strong> for processing: consent (free, specific, informed, unambiguous) or legitimate uses; (2) <strong>Purpose limitation</strong> — use only for stated purpose; (3) <strong>Data minimisation</strong>; (4) <strong>Security safeguards</strong>; (5) <strong>Breach notification</strong> to Data Protection Board and affected individuals; (6) <strong>Significant Data Fiduciaries</strong> (notified) must appoint DPO, conduct DPIA, appoint data auditor; (7) <strong>Cross-border transfer</strong> to whitelisted countries only. Penalties: up to ₹250 crore per violation.' },
-    { q:'How do I handle a ransomware attack legally?',
-      a:'Immediate legal steps: (1) <strong>CERT-In within 6 hours</strong> of detection (mandatory); (2) RBI notification within 2-6 hours if banking/financial institution; (3) Preserve all logs, forensic images — do NOT pay ransom without legal advice; (4) File FIR under Section 66 IT Act + BNS Section 316 (extortion); (5) If personal data breached, prepare for DPDP Act notification obligations when DPB is notified; (6) Notify cyber insurance carrier; (7) Root cause analysis to CERT-In within 30 days. Paying ransom may trigger FEMA violations if payment is cross-border.' },
-    { q:'What is the IT Intermediary Rules 2021 and safe harbour?',
-      a:'<strong>IT (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021</strong>: Intermediaries (platforms, ISPs, app stores) must: publish terms, privacy policy; appoint Grievance Officer (India-based, respond within 24 hours, resolve within 15 days); remove unlawful content within <strong>36 hours</strong> for specified categories (national security, sovereignty, child abuse). <strong>Significant Social Media Intermediaries</strong> (5 million+ users) must additionally appoint Chief Compliance Officer, Nodal Contact Person, Monthly compliance reports. <strong>Safe harbour (Section 79)</strong>: intermediary not liable for third-party content if it does not initiate, select recipient, or modify, AND acts on knowledge of infringement.' },
-    { q:'What is cyber defamation and available remedies?',
-      a:'Online defamation is governed by: (1) <strong>BNS Section 356</strong> (criminal defamation — 2 years + fine); (2) <strong>Common law tort</strong> (civil suit for damages + injunction); (3) Intermediary takedown under IT Rules 2021 — file complaint to platform\'s Grievance Officer; (4) If involving morphed images/deepfakes: Section 66E IT Act + BNS Section 77/79. Remedies: ex-parte injunction (courts readily grant to prevent viral spread), account of profits, damages. Platforms must act within 36 hours on specified categories. For defamation by anonymous accounts, apply to court for unmasking order directing platform to disclose user identity.' },
-    { q:'What are the legal provisions for online financial fraud?',
-      a:'Applicable laws: (1) <strong>IT Act Section 66D</strong> — cheating by personation using computer resource (3 years); (2) <strong>BNS Section 318</strong> — cheating; (3) <strong>BNS Section 316</strong> — extortion; (4) <strong>Payment and Settlement Systems Act 2007</strong>. Immediate action: (1) Call 1930 (National Cybercrime Helpline) within minutes of fraud; (2) File complaint at cybercrime.gov.in; (3) Inform your bank to freeze the destination account; (4) File FIR at nearest police station / Cyber Crime Cell; (5) Preserve all screenshots, transaction IDs, chat logs. Quick reporting (within 30 minutes) significantly increases chances of fund recovery through the Citizen Financial Cyber Fraud Reporting System.' },
-  ],
-
-  // ── RENTAL / PROPERTY ────────────────────────────────────────────────────
-  rental: [
-    { q:'What must a valid rent agreement contain?',
-      a:'Essential clauses: (1) Names/addresses of landlord and tenant; (2) Full property description; (3) Monthly rent and due date; (4) Security deposit amount + conditions for return; (5) Agreement duration + lock-in period; (6) Notice period for termination; (7) Permitted use (residential/commercial); (8) Maintenance and utility responsibilities; (9) Sub-letting prohibition; (10) Rent escalation clause (typically 5-10% per year); (11) Consequences of breach. Agreements exceeding 11 months must be compulsorily registered under Registration Act 1908. Most agreements are kept at 11 months to avoid registration + to maintain clear eviction right.' },
-    { q:'What is the legal procedure to evict a tenant?',
-      a:'(1) Issue <strong>legal notice</strong> under Section 106 TPA — 15 days for month-to-month tenancy, time proportionate for longer tenancies; (2) If tenant doesn\'t vacate, file <strong>eviction suit</strong> in Rent Control Court or Civil Court depending on state; (3) Grounds: non-payment of rent, landlord\'s genuine need, unauthorized subletting, misuse, structural damage, expiry of agreed term; (4) Court issues eviction decree; (5) Execution: Bailiff/Court Commissioner enforces possession. <strong>State laws vary</strong>: Delhi Rent Control Act, Maharashtra Rent Control Act 1999, Karnataka Rent Act 2001 — each with specific grounds and rent courts.' },
-    { q:'What is Leave and Licence vs Lease?',
-      a:'<strong>Lease (Section 105 TPA)</strong>: Creates an interest in immovable property. The lessee gets exclusive possession and enforceable rights against the whole world. Leases > 1 year must be registered. Tenant protection under Rent Control Acts applies. <strong>Leave and Licence (Section 52 Easements Act)</strong>: Creates no property interest — only a revocable personal permission. Licensor can revoke subject to agreement terms and reasonable notice. Licensee does NOT get protection under most state Rent Control Acts. Most urban residential arrangements use Leave and Licence expressly to avoid rent control protection and enable easier recovery of possession.' },
-    { q:'What is the landlord\'s duty to maintain the property?',
-      a:'Under <strong>Section 108 TPA</strong>, the lessor must: (1) Disclose material defects known to lessor but not tenant before lease; (2) Put tenant in possession on the commencement date; (3) Allow quiet enjoyment of the property during the lease. Tenant\'s duty: pay rent, allow repairs, not commit waste, not use for unauthorized purpose. If landlord enters without permission: civil action for trespass + injunction, potentially criminal (Section 442 BNS house trespass). Courts grant ex-parte injunctions readily in such cases. Illegal eviction (cutting utilities, changing locks) is both civil tort and criminal offence.' },
-    { q:'What are security deposit laws by state?',
-      a:'Security deposit limits: <strong>Karnataka</strong> — max 10 months rent (Karnataka Rent Act 2001); <strong>Maharashtra</strong> — no statutory cap, market practice 1-3 months; <strong>Delhi</strong> — no cap under Delhi Rent Control Act; <strong>Tamil Nadu</strong> — max 5 months; <strong>AP/Telangana</strong> — max 2 months. Return of deposit: must be refunded within the period specified in agreement (typically 30-45 days after vacant possession) minus lawful deductions for damage beyond normal wear and tear. Deductions must be itemised. Withholding security deposit without cause: complaint to Rent Controller + civil suit for recovery with interest.' },
-    { q:'How can a tenant contest an illegal eviction?',
-      a:'If landlord illegally evicts (changes locks, removes belongings, cuts utilities, intimidation): (1) Immediately file police complaint (Section 441/442 BNS — trespass, criminal force); (2) File urgent application before Civil Judge/Rent Controller for <strong>interim injunction</strong> + restoration of possession; (3) Include Specific Relief Act Section 38 (perpetual injunction) in the civil suit; (4) Claim damages for wrongful eviction. Courts grant ex-parte restoration orders within 24-48 hours in genuine cases. Document everything — photographs, medical reports if there was physical force, witness statements.' },
-  ],
-
-  // ── CORPORATE LAW ────────────────────────────────────────────────────────
-  corp: [
-    { q:'What are the types of companies under Companies Act 2013?',
-      a:'(1) <strong>Private Limited</strong> — 2-200 members, ≥ ₹1 lakh paid-up, restricted share transfer; (2) <strong>Public Limited</strong> — 7+ members, no cap, ≥ ₹5 lakh paid-up, can list on exchanges; (3) <strong>One Person Company (OPC)</strong> — single member with nominee; (4) <strong>Section 8 Company</strong> — non-profit with charitable objects; (5) <strong>Small Company</strong> — paid-up ≤ ₹4 crore, turnover ≤ ₹40 crore (easier compliance); (6) <strong>LLP</strong> — under LLP Act 2008, hybrid of company and partnership, limited liability; (7) <strong>Nidhi / Producer / Guarantee</strong> companies for specific purposes.' },
-    { q:'How do I incorporate a Private Limited Company?',
-      a:'(1) Obtain DSC (Digital Signature Certificate) for directors; (2) Apply for DIN (Director Identification Number); (3) Reserve name via <strong>RUN</strong> (Reserve Unique Name) on MCA portal; (4) File <strong>SPICe+ (INC-32)</strong> with MOA, AOA, declarations, stamp duty; (5) Certificate of Incorporation issued with CIN, PAN, TAN; (6) Open current bank account; (7) File INC-20A (commencement declaration) within 180 days. Timeline: 5-7 working days. Cost: Government fees ₹2,000-15,000 + professional fees. New: AGILE-PRO-S provides GST, EPFO, ESIC, Professional Tax, Bank Account in one form.' },
-    { q:'What are the duties of directors under Companies Act 2013?',
-      a:'<strong>Section 166</strong>: (1) Act in good faith in best interests of the company, shareholders, employees, community, environment; (2) Exercise due care, skill, diligence; (3) Exercise independent judgment — not fettered by external direction; (4) Avoid conflict of interest (disclose under Section 184); (5) Not achieve undue gain; (6) Not assign directorship. Breach: civil liability + penalty ₹1-5 lakh per default (Section 166(7)). <strong>Section 447 fraud</strong> (dishonest intent): imprisonment 6 months-10 years + fine. <strong>Section 149(8)/Schedule IV</strong>: Independent directors have additional duties including protecting minority shareholders.' },
-    { q:'What is the IBC insolvency process?',
-      a:'<strong>Insolvency and Bankruptcy Code 2016</strong> — CIRP: (1) Application by financial creditor (Section 7), operational creditor (Section 9), or corporate debtor (Section 10) to NCLT — minimum default ₹1 crore; (2) NCLT admits within 14 days; (3) IRP appointed, moratorium declared; (4) Committee of Creditors (CoC) formed — financial creditors only; (5) RP invites resolution plans; (6) CoC approves with <strong>66% vote</strong>; (7) NCLT approves; (8) If no plan within <strong>180 days</strong> (extendable to 330 days) — liquidation. The CoC\'s commercial wisdom is paramount (<em>Essar Steel 2019</em>). Operational creditors now protected — cannot be given less than liquidation value.' },
-    { q:'What are the key clauses in a Shareholders Agreement?',
-      a:'Essential SHA clauses: (1) <strong>Pre-emption rights</strong> — right of first offer to existing shareholders before external transfer; (2) <strong>Tag-along</strong> — minority can join majority\'s exit on same terms; (3) <strong>Drag-along</strong> — majority can compel minority to sell to same buyer; (4) <strong>Anti-dilution</strong> (full ratchet or weighted average) — protects investor in down rounds; (5) <strong>ROFR</strong> — right of first refusal; (6) <strong>Board composition</strong> — investor nominee directors; (7) <strong>Affirmative vote matters</strong> (reserved matters requiring investor consent); (8) <strong>Liquidation preference</strong> — investors recover capital first; (9) Non-compete, non-solicitation for founders; (10) Information rights — quarterly financials, board access.' },
-    { q:'What is corporate fraud and how is it prosecuted?',
-      a:'<strong>Section 447 Companies Act 2013</strong>: Fraud = any act with intent to deceive, gain undue advantage, injure interests of company/shareholders/creditors. Punishment: imprisonment 6 months to 10 years + fine equal to or up to 3× amount involved. If fraud > ₹10 lakh or involves public interest: minimum 3 years, no compounding. <strong>Serious Fraud Investigation Office (SFIO)</strong> investigates under Section 212. Additionally: IPC/BNS cheating (Section 318 BNS), criminal breach of trust (Section 316 BNS), PMLA prosecution for proceeds of crime. Directors can be arrested and remanded. Compounding under Section 441 permitted only for technical defaults, not fraud.' },
-  ],
-
-  // ── FAMILY LAW ───────────────────────────────────────────────────────────
-  family: [
-    { q:'What are the grounds for divorce under Hindu Marriage Act?',
-      a:'<strong>Section 13 HMA 1955</strong> — Fault grounds: (1) Adultery; (2) Cruelty (physical or mental); (3) Desertion for ≥ 2 continuous years; (4) Conversion to another religion; (5) Incurable unsoundness of mind for ≥ 3 years; (6) Virulent/incurable leprosy; (7) Communicable venereal disease; (8) Renunciation of world (sanyas); (9) Presumption of death (7 years unheard of). <strong>Section 13B — Mutual Consent</strong>: Both parties file petition after 1 year of marriage; 6-month cooling period (waivable by Supreme Court per <em>Amardeep Singh v Harveen Kaur 2017</em> if marriage irretrievably broken). Also applies under Special Marriage Act 1954.' },
-    { q:'How is maintenance/alimony determined?',
-      a:'Multiple provisions: (1) <strong>Section 125 CrPC / Section 144 BNSS</strong>: Magistrate orders for wife, minor children, parents — no upper limit, based on means and needs; (2) <strong>Section 24 HMA</strong>: Interim maintenance during pendency of petition; (3) <strong>Section 25 HMA</strong>: Permanent alimony — lump sum or monthly; (4) <strong>Domestic Violence Act 2005</strong>: Monetary relief including maintenance. <em>Rajnesh v Neha (2020)</em> SC guidelines: mandatory disclosure of assets and liabilities, uniform affidavit format, factor-based analysis (earning capacity, standard of living, number of children, wife\'s independent income, duration of marriage, age).' },
-    { q:'What are the custody rights for children?',
-      a:'Governed by Guardians and Wards Act 1890 + Hindu Minority and Guardianship Act 1956. <strong>Paramount principle</strong>: best interests of the child. Below 5 years — mother generally preferred (Section 6(a) HMGA). Father is natural guardian after 5 but mother\'s fitness is primary consideration. Courts increasingly grant <strong>joint physical custody</strong> (alternate weeks/months). Court considers: child\'s wishes (if old enough), emotional bond, each parent\'s capacity (income, stability, criminal record), continuity of schooling. Habeas corpus before HC for immediate production of wrongfully withheld child. International child abduction: India is not a Hague Convention signatory but courts apply welfare principle.' },
-    { q:'What is the Domestic Violence Act?',
-      a:'<strong>PWDVA 2005</strong>: Protects women in domestic relationships (married, live-in, sister, daughter, mother) from physical, sexual, verbal/emotional, economic abuse. Reliefs from Magistrate: (1) <strong>Protection Order</strong> — restraint on entering shared household, approaching aggrieved woman; (2) <strong>Residence Order</strong> — right to stay in shared household even if not owner; (3) <strong>Monetary Relief</strong> — maintenance, medical, loss of earnings; (4) <strong>Custody Order</strong> — temporary custody; (5) <strong>Compensation</strong>. Protection Officer assists in filing, preparing DVIRs. Violation of Protection Order: cognizable non-bailable offence, up to 1 year + ₹20,000 fine (Section 31). Emergency relief possible within 24-48 hours of filing.' },
-    { q:'What is the Muslim Women (Protection of Rights on Divorce) Act?',
-      a:'The <strong>Muslim Women (Protection of Rights on Marriage) Act, 2019</strong> criminalises <strong>Triple Talaq (talaq-e-biddat)</strong>: (1) Makes instant triple talaq void and illegal; (2) Husband pronouncing triple talaq (written, electronic, verbal) liable for up to 3 years imprisonment + fine; (3) Offence is cognizable (arrest without warrant) and non-bailable; (4) Complaint can be filed by aggrieved woman or blood relatives — not third parties; (5) Magistrate may grant bail after hearing wife; (6) Magistrate may allow compounding (settlement) on wife\'s application. Wife entitled to subsistence allowance and custody of children from Magistrate.' },
-    { q:'How is property divided upon divorce in India?',
-      a:'India has no community property system. Matrimonial property rights: (1) <strong>Hindu succession</strong>: Property owned by each spouse remains theirs. Court may award maintenance (capital sum under Section 25 HMA). (2) <strong>Stridhan</strong>: Gifts given to wife before/during/after marriage are her absolute property; wrongful withholding = Section 405 BNS (criminal breach of trust). (3) Courts use <strong>irretrievable breakdown doctrine</strong> to do equity in long marriages — SC has awarded 1/3 of matrimonial assets to wife. (4) <strong>Matrimonial Homes</strong>: DV Act gives right of residence regardless of ownership. In <em>Satish Sitole v Ganga</em>, SC said wife\'s contribution to household must be considered.' },
-  ],
-
-  // ── LABOUR LAW ───────────────────────────────────────────────────────────
-  labour: [
-    { q:'What are the 4 new Labour Codes?',
-      a:'Four codes consolidate 29 central labour laws (enacted, awaiting state notification): (1) <strong>Code on Wages 2019</strong>: Minimum Wages Act, Payment of Wages Act, Equal Remuneration Act, Payment of Bonus Act — floor wage concept, weekly payment option; (2) <strong>Industrial Relations Code 2020</strong>: Trade Unions Act, Industrial Employment (Standing Orders) Act, Industrial Disputes Act — retrenchment/layoff threshold raised to 300 workers; (3) <strong>Social Security Code 2020</strong>: EPF, ESI, Gratuity, Maternity Benefit, ESIC extended to gig/platform workers; (4) <strong>OSH Code 2020</strong>: Factories Act, Mines Act, Contract Labour Act — single licence, working hours capped at 8 per day / 48 per week. Until notification, old laws continue.' },
-    { q:'What constitutes wrongful/illegal termination?',
-      a:'Termination is wrongful if it violates: (1) <strong>Section 25F Industrial Disputes Act</strong>: Retrenchment of workman in establishment ≥ 100 workers requires: 1 month notice (or wages in lieu), 15 days\' compensation per completed year of service, government permission (Section 25N ≥ 100 workers); (2) <strong>Principles of natural justice</strong>: opportunity to show cause, inquiry, order; (3) <strong>Standing Orders</strong>: procedure prescribed in certified standing orders for misconduct; (4) <strong>Anti-discrimination</strong>: termination based on caste, religion, sex, pregnancy (Maternity Benefit Act), trade union activity (Section 9A/IDA). Remedies: reinstatement with full back wages + lump-sum compensation (Labour Court/Industrial Tribunal).' },
-    { q:'What are the POSH Act obligations for employers?',
-      a:'<strong>Sexual Harassment of Women at Workplace Act 2013</strong>: Applies to all establishments (no employee threshold). Employer must: (1) Constitute <strong>ICC</strong> (Internal Complaints Committee) — at least 4 members including external member, presiding officer must be woman; (2) Display policy at conspicuous places; (3) Conduct awareness programmes; (4) ICC inquiry must complete within <strong>90 days</strong>; (5) Act on ICC report within 60 days; (6) Submit annual report to District Officer; (7) Non-constitution of ICC: penalty ₹50,000 (repeat: double + licence cancellation). Extended to domestic workers, gig workers. Available to women employees including interns, contractual, temporary.' },
-    { q:'What are the EPF and ESI compliance obligations?',
-      a:'<strong>EPF & MP Act 1952</strong>: Applies to establishments ≥ 20 employees. Employee: 12% of basic+DA. Employer: 12% (8.33% → EPS Pension, 3.67% → EPF). UAN is portable — follows employee across employers. EDLI (Life Insurance) also covered. Non-compliance: damages 5-25% of arrears + prosecution. <strong>ESI Act 1948</strong>: Applies to establishments ≥ 10 employees in notified areas, wages ≤ ₹21,000/month. Employee: 0.75%, Employer: 3.25% of gross wages. Benefits: medical (employee + family), sickness (70% wages), maternity (26 weeks), disablement, death. Non-compliance: damages + interest + prosecution (Section 85-86 EPF Act; Section 84-85 ESI Act).' },
-    { q:'What is the Maternity Benefit Act?',
-      a:'<strong>Maternity Benefit (Amendment) Act 2017</strong>: (1) Maternity leave extended to <strong>26 weeks</strong> for first 2 children (12 weeks for 3rd child+), 12 weeks for adoption/surrogacy; (2) Applies to establishments ≥ 10 employees; (3) Paid leave at average daily wages; (4) No discharge/dismissal during leave or while on leave; (5) Work from home option if feasible after return; (6) Creche facility mandatory for establishments ≥ 50 employees; (7) Nursing breaks twice daily for 15 months after birth. Violations: imprisonment up to 1 year + ₹5,000 fine.' },
-    { q:'What are the rules on contract labour?',
-      a:'<strong>Contract Labour (Regulation and Abolition) Act 1970</strong>: (1) Principal employer (≥ 20 contract workers) must register; (2) Contractor (≥ 20 workers) must obtain licence; (3) Principal employer liable if contractor fails to provide PF, ESI, minimum wages, facilities (canteen, restrooms, first aid); (4) Government can prohibit contract labour in certain processes; (5) Where prohibited, contract workers are deemed to be directly employed by principal employer. After IBC Codes, threshold raised in draft rules. Gig/platform workers under new Social Security Code 2020 — entitled to minimum benefits (accident insurance, health coverage) even without traditional employment.' },
-  ],
-
-  // ── TAX LAW ─────────────────────────────────────────────────────────────
-  tax: [
-    { q:'What is GST applicable on legal services?',
-      a:'<strong>GST on legal services (SAC 9982)</strong>: (1) Advocate services to any business entity (firm, company, LLP): <strong>18% under Reverse Charge Mechanism (RCM)</strong> — the business client pays GST directly to government, not the advocate; (2) Advocate to individual (not business): <strong>exempt</strong>; (3) Advocate to other advocate for joint cases: <strong>exempt</strong>; (4) Senior Advocate services to another advocate/law firm: <strong>18% forward charge</strong> — senior advocate collects GST. An advocate whose aggregate turnover > ₹20 lakh (₹10 lakh for special category states) must register for GST. But since individual clients pay no GST and businesses pay under RCM, most advocates have nil GST liability and need not register unless providing taxable services.' },
-    { q:'What are income tax obligations for advocates?',
-      a:'(1) <strong>Section 44ADA</strong> (presumptive): If turnover ≤ ₹75 lakh (raised in Budget 2024 from ₹50 lakh), 50% deemed profit — no books required. (2) Above ₹75 lakh: maintain books, mandatory tax audit under Section 44AB. (3) <strong>TDS Section 194J</strong>: Clients (companies/firms) deduct 10% TDS on fees. (4) <strong>Advance tax</strong>: quarterly instalments (June 15 — 15%, Sept 15 — 45%, Dec 15 — 75%, March 15 — 100%). (5) <strong>GST</strong>: RCM applies (clients pay), so normally no GST liability for advocates unless providing taxable services. (6) <strong>Professional Tax</strong>: varies by state, typically ₹200-2,500/year. (7) Expenses deductible: chambers rent, clerk salary, library, court fees, travel.' },
-    { q:'What are the capital gains tax rules (post Budget 2024)?',
-      a:'<strong>Post-Budget 2024 changes</strong>: (1) <strong>STCG on listed equity/equity MF</strong>: increased from 15% to <strong>20%</strong> (holding ≤ 12 months); (2) <strong>LTCG on listed equity/equity MF</strong>: increased from 10% to <strong>12.5%</strong> above ₹1.25 lakh exemption (holding > 12 months); (3) <strong>LTCG on immovable property</strong>: reduced from 20% (with indexation) to <strong>12.5% without indexation</strong> — may disadvantage long-held properties; (4) Holding period for all other assets: STCG < 24 months, LTCG ≥ 24 months; (5) <strong>Reinvestment exemptions</strong>: Section 54 (residential property ₹10 crore cap), Section 54EC (NHAI/REC bonds, ₹50 lakh cap, 5-year lock-in).' },
-    { q:'What is tax evasion vs tax avoidance?',
-      a:'<strong>Tax Avoidance</strong>: Using legal provisions to reduce tax liability (claiming deductions, HUF planning, trust structures). Legal but government counters through GAAR (General Anti-Avoidance Rules — Section 95-102 ITA): if an arrangement\'s main purpose is tax benefit and it lacks commercial substance, it can be declared an "impermissible avoidance arrangement." <strong>Tax Evasion</strong>: Wilful suppression of income, false returns, falsifying books, bribery of officials — criminal under Section 276C (prosecution + imprisonment up to 7 years + fine). Income Tax Department can search and seize (Section 132), issue show-cause notices. PMLA applies when the evasion is linked to proceeds of crime. BENAMI transactions: imprisonment up to 7 years.' },
-    { q:'What is the Black Money Act?',
-      a:'<strong>Black Money (Undisclosed Foreign Income and Assets) and Imposition of Tax Act, 2015</strong>: (1) Targets undisclosed foreign income and assets; (2) Tax rate: <strong>30%</strong> flat on undisclosed foreign income/assets; (3) Penalty: additional 90% of tax = effectively 120% of value; (4) <strong>Criminal prosecution</strong>: rigorous imprisonment 3-10 years + fine for wilful attempt to evade; (5) Concealment of foreign assets: imprisonment up to 7 years; (6) Complicity of professionals (CAs, lawyers): imprisonment up to 3 years; (7) No prosecution after compounding; (8) Limitation: 16 years. India has signed various DTAAs and receives information under FATCA, CRS — making foreign asset concealment increasingly difficult.' },
-  ],
-
-  // ── IP LAW ───────────────────────────────────────────────────────────────
-  ip: [
-    { q:'How do I register a trademark in India?',
-      a:'<strong>Trade Marks Act 1999</strong>: (1) Trademark search on IP India portal; (2) File TM-A (online via IP India) in the relevant Nice Classification class (1-45); (3) Examination report within 2-3 months; (4) Objections must be replied within 1 month; (5) Accepted marks published in Trade Marks Journal — <strong>4-month opposition window</strong>; (6) If no opposition, registration certificate issued; (7) Valid <strong>10 years</strong>, infinitely renewable. Cost: ₹4,500 (e-filing, individual/startup) to ₹9,000 (large entity) per class. Timeline: 18-24 months typically. File for multiple classes if services span categories. Unregistered marks still get passing off protection if goodwill is established.' },
-    { q:'What is copyright protection and how long does it last?',
-      a:'<strong>Copyright Act 1957</strong>: Subsists automatically on creation — no registration needed. Protects literary (including legal texts, software), artistic, musical, cinematographic works, sound recordings. Duration: author\'s life + <strong>60 years</strong> (for original works); 60 years from publication for anonymous/pseudonymous works, sound recordings, broadcasts. Registration (optional) at Copyright Office provides prima facie evidence of ownership. Court judgments and Acts of Parliament are NOT copyrightable (Section 52(1)(q)). Fair dealing for research, criticism, news reporting, education permitted. Software as literary work — SaaS and code-sharing raise complex copyright and licence issues.' },
-    { q:'What are the patent laws in India?',
-      a:'<strong>Patents Act 1970</strong>: Protects new, inventive, industrially applicable inventions for <strong>20 years</strong>. Not patentable (Section 3): discoveries, scientific theories, mathematical methods, business methods, mental acts, computer programs per se (though technical effect can be patented), plants/animals, medical treatment methods, traditional knowledge, atomic energy inventions. Procedure: file provisional/complete specification → 18-month publication → request examination within 48 months → FER → respond within 6 months → grant/refusal. Post-grant opposition: 12 months. Pre-grant opposition: any time before grant. India: PCT signatory for international applications.' },
-    { q:'What is trademark infringement and passing off?',
-      a:'<strong>Infringement (Section 29 TM Act)</strong>: Registered mark used in commerce — (1) identical mark for identical goods/services; (2) identical/similar mark for similar goods — likelihood of confusion; (3) well-known mark use that takes unfair advantage. <strong>Passing off</strong> (common law): available even without registration. Elements (classic trinity from <em>Reckitt & Colman v Borden, applied in India</em>): goodwill, misrepresentation, damage. Remedies for both: injunction (interlocutory + permanent), account of profits or damages, delivery up/destruction of infringing goods. Criminal (TM Act Section 103): imprisonment up to 3 years + fine. Anton Piller/John Doe orders for search and seizure in large-scale counterfeiting.' },
-    { q:'What is a design registration?',
-      a:'<strong>Designs Act 2000</strong>: Protects novel ornamental/aesthetic features of an article (shape, configuration, pattern, ornamentation, composition of lines/colours). Does NOT protect functional features. Registration valid <strong>10 years</strong> + 5 year extension. Application to Patent Office (Designs Wing). Novelty required — not previously published anywhere. Benefits: exclusive right to apply the design to any article; infringement suit for damages + injunction. If design not registered: no design right protection (unlike EU/UK unregistered design right). A product can simultaneously have patent protection (functional), design protection (aesthetic), and trademark protection (trade dress).' },
-    { q:'What is a trade secret and how is it protected?',
-      a:'India has no specific trade secret legislation. Protection is through: (1) <strong>Contract law</strong>: Non-Disclosure Agreements (NDAs), non-compete clauses in employment contracts (reasonableness test for enforceability — <em>Niranjan Shankar Golikari v CEAT 1967</em>); (2) <strong>BNS</strong>: criminal breach of trust (Section 316), cheating; (3) <strong>Torts</strong>: breach of confidence; (4) <strong>Copyright</strong> for specific expression. Courts grant injunctions readily to prevent disclosure of trade secrets. Employee taking client lists, formulas, source code on departure is actionable. Employer must establish: information is secret, steps taken to maintain secrecy, economic value from secrecy.' },
-  ],
-
-  // ── CONSTITUTIONAL LAW ───────────────────────────────────────────────────
-  const: [
-    { q:'What are the Fundamental Rights and their significance?',
-      a:'<strong>Part III Articles 12-35</strong>: (1) <strong>Article 14</strong>: Equality before law and equal protection — includes reasonable classification test and arbitrariness doctrine (<em>EP Royappa</em>); (2) <strong>Article 19</strong>: Six freedoms — speech, assembly, association, movement, residence, profession (subject to reasonable restrictions); (3) <strong>Article 20</strong>: Protection against double jeopardy, self-incrimination, ex post facto laws; (4) <strong>Article 21</strong>: Right to life and personal liberty — "procedure established by law" read as "due process" (<em>Maneka Gandhi 1978</em>) — includes right to health, education, livelihood, privacy (<em>Puttaswamy 2017</em>), dignity; (5) <strong>Article 32</strong>: Right to move SC for enforcement — Dr Ambedkar called it the "heart and soul of the Constitution."' },
-    { q:'What is judicial review in India?',
-      a:'Power of courts to review constitutionality of legislative/executive actions. Sources: Article 13 (laws inconsistent with FR are void), Articles 32 and 226 (writ jurisdiction). Scope: (1) <strong>Legislative actions</strong>: invalidated if violate FR, exceed legislative competence, or manifestly arbitrary; (2) <strong>Executive actions</strong>: reviewed on grounds of arbitrariness, reasonableness, natural justice, legitimate expectation, proportionality; (3) <strong>Basic Structure doctrine</strong> (<em>Kesavananda Bharati 1973</em>): even constitutional amendments cannot alter the basic structure (democracy, secularism, federalism, separation of powers, judicial review). India\'s judicial review is broader than USA — includes non-FR constitutional provisions.' },
-    { q:'What are the writs under Article 32 and 226?',
-      a:'Five constitutional writs: (1) <strong>Habeas Corpus</strong> ("produce the body") — challenges illegal detention; most urgent, no locus standi restriction; (2) <strong>Mandamus</strong> ("we command") — compels performance of public duty; against government, statutory bodies; (3) <strong>Prohibition</strong> — prevents inferior court/tribunal from exceeding jurisdiction; (4) <strong>Certiorari</strong> — quashes an order already passed by inferior court/tribunal exceeding jurisdiction or violating natural justice; (5) <strong>Quo Warranto</strong> — challenges a person\'s legal authority to hold a public office. HC under Article 226 can issue against any authority including private bodies performing public functions. SC under Article 32 only against Union/State instrumentalities.' },
-    { q:'What is the doctrine of basic structure?',
-      a:'Propounded in <em><strong>Kesavananda Bharati v State of Kerala (1973)</strong></em> (13-judge bench, 7:6): Parliament can amend any part of the Constitution under Article 368 but <em>cannot alter its basic structure</em>. Basic structure elements (not exhaustive): supremacy of the Constitution, republican and democratic form of government, secular character, separation of powers, federal character, judicial review, rule of law, fundamental rights, unity and integrity of India, dignity of the individual. Used to strike down: 42nd Amendment provisions (<em>Minerva Mills</em>), anti-defection provisions, constitutional court-packing attempts, NJAC (<em>SC Advocates Association 2016</em>).' },
-  ],
-
-  // ── CONSUMER LAW ────────────────────────────────────────────────────────
-  consumer: [
-    { q:'What are the consumer rights under the Consumer Protection Act 2019?',
-      a:'<strong>Consumer Protection Act 2019</strong> significantly strengthens consumer rights: (1) <strong>Right to safety</strong>; (2) <strong>Right to information</strong>; (3) <strong>Right to choose</strong>; (4) <strong>Right to be heard</strong>; (5) <strong>Right to redressal</strong>; (6) <strong>Right to consumer education</strong>. New additions: (7) Regulation of <strong>e-commerce</strong> — mandatory display of all charges, return policy, country of origin; (8) <strong>Product liability</strong> — manufacturer/seller/service provider strictly liable for defective products; (9) <strong>Unfair contracts</strong> — terms that significantly disadvantage consumers are void; (10) <strong>Central Consumer Protection Authority (CCPA)</strong> — suo motu powers, class action, product recall.' },
-    { q:'What is the pecuniary jurisdiction of consumer forums?',
-      a:'Three-tier redressal under CPA 2019 (enhanced limits): (1) <strong>District Consumer Commission</strong>: claims up to ₹50 lakh; (2) <strong>State Consumer Commission</strong>: ₹50 lakh to ₹2 crore; (3) <strong>National Consumer Commission (NCDRC)</strong>: above ₹2 crore. Jurisdiction is determined by value of goods/services + compensation claimed. Filing: online (e-daakhil portal), physical at commission. Filing fee: ₹200 (up to ₹5 lakh) to ₹7,500 (above ₹2 crore). No court fee. Limitation: 2 years from cause of action (with condonation for sufficient cause). No appearance of advocate needed — consumer can represent themselves.' },
-    { q:'What is unfair trade practice under CPA 2019?',
-      a:'<strong>Section 2(47) CPA 2019</strong> — Unfair trade practice includes: (1) False representation of product quality/standard/grade; (2) False claims about certification (ISI, Agmark); (3) Misleading price bargain representation; (4) Sponsoring misleading price bargain contests; (5) Not issuing cash memo; (6) Hoarding or destruction of goods to raise price; (7) <strong>Online manipulation</strong>: fake reviews, search result manipulation, limiting consumer choices, price fixing by platform; (8) Non-disclosure of total charges in e-commerce. CCPA has power to investigate, impose penalties (₹10 lakh for first, ₹50 lakh for repeat), recall products, and issue class action orders protecting consumers.' },
-    { q:'How do I file a consumer complaint?',
-      a:'(1) First send a <strong>legal notice</strong> to the opposite party (not mandatory but advisable — often resolves the issue); (2) File complaint on <strong>e-daakhil.nic.in</strong> (online portal) or physically at appropriate District Commission; (3) Complaint must contain: complainant/opposite party details, facts, deficiency/unfair trade practice, relief sought, affidavit; (4) Attach: bills, receipts, correspondence, warranty card, photographs; (5) Pay nominal filing fee; (6) Commission admits and sends notice to opposite party; (7) Mediation attempt under Section 37; (8) Evidence and arguments; (9) Order for compensation, replacement, refund, or punitive damages (up to ₹10 lakh for intentional acts).' },
-  ],
-
-}; // end BOT_QA
-
-let _botCurrentCat = null;
-
-// ── Enable/disable ────────────────────────────────────────────────────────
 function isChatbotEnabled(){
   return localStorage.getItem('ld_chatbot_enabled') !== 'false';
 }
 function setChatbotEnabled(val){
   localStorage.setItem('ld_chatbot_enabled', String(val));
   if(val) renderChatbotButton();
-  else { document.getElementById('chatbot-btn')?.remove(); document.getElementById('chatbot-panel')?.remove(); }
+  else {
+    document.getElementById('chatbot-btn')?.remove();
+    document.getElementById('chatbot-panel')?.remove();
+    _botOpen = false;
+  }
 }
 
-// ── Init / 2-day clear ────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────
 function initChatbot(){
   if(!isChatbotEnabled()) return;
-  const lastDate = localStorage.getItem(CHATBOT_DATE);
+  const lastDate = localStorage.getItem(BOT_DATE);
   if(!lastDate || Date.now()-parseInt(lastDate) > 2*86400000){
-    localStorage.removeItem(CHATBOT_KEY);
-    localStorage.setItem(CHATBOT_DATE, String(Date.now()));
+    localStorage.removeItem(BOT_KEY);
+    localStorage.setItem(BOT_DATE, String(Date.now()));
   }
   renderChatbotButton();
 }
@@ -6117,221 +6085,278 @@ function renderChatbotButton(){
   if(document.getElementById('chatbot-btn')) return;
   const btn = document.createElement('div');
   btn.id = 'chatbot-btn';
-  btn.innerHTML = `<i class="fas fa-robot" style="font-size:22px;"></i>`;
+  btn.innerHTML = `<i class="fas fa-robot" style="font-size:20px;"></i>`;
   btn.title = 'LexDesk Assistant';
   Object.assign(btn.style, {
-    position:'fixed', bottom:'80px', right:'24px', zIndex:'8888',
-    width:'52px', height:'52px', borderRadius:'50%',
-    background:'var(--navy)', border:'2.5px solid var(--gold)',
+    position:'fixed', bottom:'24px', right:'24px', zIndex:'8888',
+    width:'50px', height:'50px', borderRadius:'50%',
+    background:'var(--navy)', border:'2px solid var(--gold)',
     color:'var(--gold)', display:'flex', alignItems:'center', justifyContent:'center',
-    cursor:'pointer', boxShadow:'0 4px 20px rgba(0,0,0,.35)',
-    transition:'transform .15s', userSelect:'none'
+    cursor:'pointer', boxShadow:'0 4px 18px rgba(0,0,0,.32)',
+    userSelect:'none', flexShrink:'0'
   });
-  makeChatbotDraggable(btn);
+  makeBotDraggable(btn);
   document.body.appendChild(btn);
 }
 
-function makeChatbotDraggable(el){
-  let sx=0,sy=0,ex=0,ey=0,dragging=false,moved=false;
+function makeBotDraggable(el){
+  let sx,sy,ex,ey,dragging=false,moved=false;
   el.addEventListener('pointerdown', e=>{
     dragging=true; moved=false;
     sx=e.clientX; sy=e.clientY;
-    ex=parseInt(el.style.right)||24; ey=parseInt(el.style.bottom)||80;
+    ex=parseInt(el.style.right)||24; ey=parseInt(el.style.bottom)||24;
     e.preventDefault();
   });
   window.addEventListener('pointermove', e=>{
     if(!dragging) return;
     const dx=sx-e.clientX, dy=sy-e.clientY;
-    if(Math.abs(dx)+Math.abs(dy)>5) moved=true;
-    el.style.right=Math.max(0,ex+dx)+'px';
-    el.style.bottom=Math.max(0,ey+dy)+'px';
+    if(Math.abs(dx)+Math.abs(dy)>6) moved=true;
+    el.style.right  = Math.max(0,ex+dx)+'px';
+    el.style.bottom = Math.max(0,ey+dy)+'px';
+    // Move panel with button
+    const p=document.getElementById('chatbot-panel');
+    if(p){ p.style.right=el.style.right; p.style.bottom=(parseInt(el.style.bottom)+58)+'px'; }
   });
   window.addEventListener('pointerup', ()=>{ dragging=false; });
-  el.addEventListener('click', e=>{ if(moved){ e.stopImmediatePropagation(); moved=false; } else toggleChatbot(); });
+  el.addEventListener('click', e=>{
+    if(moved){ moved=false; return; }
+    toggleChatbot();
+  });
 }
 
 function toggleChatbot(){
-  const panel = document.getElementById('chatbot-panel');
-  if(panel) panel.remove(); else openChatbot();
+  const p=document.getElementById('chatbot-panel');
+  if(p){ p.remove(); _botOpen=false; }
+  else { openChatbot(); _botOpen=true; }
 }
 
+// ── Panel ─────────────────────────────────────────────────────────────────
 function openChatbot(){
   if(document.getElementById('chatbot-panel')) return;
-  _botCurrentCat = null;
-  const history = JSON.parse(localStorage.getItem(CHATBOT_KEY)||'[]');
+  const history = JSON.parse(localStorage.getItem(BOT_KEY)||'[]');
   const btn = document.getElementById('chatbot-btn');
   const bR = parseInt(btn?.style.right)||24;
-  const bB = parseInt(btn?.style.bottom)||80;
+  const bB = parseInt(btn?.style.bottom)||24;
+
   const panel = document.createElement('div');
   panel.id = 'chatbot-panel';
   Object.assign(panel.style, {
-    position:'fixed', bottom:(bB+62)+'px', right:bR+'px',
-    zIndex:'8889', width:'360px', maxHeight:'540px',
+    position:'fixed', bottom:(bB+58)+'px', right:bR+'px', zIndex:'8889',
+    width:'350px', maxHeight:'520px',
     background:'var(--bg-card)', borderRadius:'16px',
-    boxShadow:'0 8px 40px rgba(0,0,0,.25)',
-    border:'1px solid var(--border)',
+    boxShadow:'0 8px 40px rgba(0,0,0,.22)', border:'1px solid var(--border)',
     display:'flex', flexDirection:'column', overflow:'hidden'
   });
-  const totalQs = Object.values(BOT_QA).reduce((s,a)=>s+a.length,0);
+
   panel.innerHTML = `
-    <div style="background:var(--navy);padding:12px 16px;display:flex;align-items:center;gap:10px;">
-      <div style="width:34px;height:34px;border-radius:50%;background:rgba(201,168,76,.18);
-           display:flex;align-items:center;justify-content:center;color:var(--gold);flex-shrink:0;">
-        <i class="fas fa-robot" style="font-size:16px;"></i>
+    <div style="background:var(--navy);padding:13px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(201,168,76,.18);
+        display:flex;align-items:center;justify-content:center;color:var(--gold);flex-shrink:0;">
+        <i class="fas fa-balance-scale" style="font-size:14px;"></i>
       </div>
-      <div style="flex:1;">
-        <div style="color:#fff;font-weight:600;font-size:14px;">LexDesk Assistant</div>
-        <div style="color:rgba(255,255,255,.4);font-size:10.5px;">${totalQs} questions · System help + Legal guidance</div>
+      <div style="flex:1;min-width:0;">
+        <div style="color:#fff;font-weight:600;font-size:13.5px;line-height:1;">LexDesk Assistant</div>
+        <div style="color:rgba(255,255,255,.4);font-size:10.5px;margin-top:2px;">System help · Indian law · Always here</div>
       </div>
-      <button onclick="document.getElementById('chatbot-panel').remove()"
-        style="background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;padding:0;">&times;</button>
+      <button onclick="toggleChatbot()"
+        style="background:none;border:none;color:rgba(255,255,255,.45);font-size:19px;
+               cursor:pointer;padding:0;line-height:1;flex-shrink:0;">&times;</button>
     </div>
-    <div id="chatbot-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:60px;">
+
+    <div id="bot-messages" style="flex:1;overflow-y:auto;padding:14px 12px;
+      display:flex;flex-direction:column;gap:10px;
+      scrollbar-width:thin;scrollbar-color:var(--border) transparent;">
       ${history.length
-        ? history.map(m=>`<div style="align-self:${m.role==='user'?'flex-end':'flex-start'};max-width:92%;
-            background:${m.role==='user'?'var(--navy)':'var(--bg)'};
-            color:${m.role==='user'?'#fff':'var(--text-primary)'};
-            padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.55;
-            ${m.role!=='user'?'border:1px solid var(--border)':''};">${m.content}</div>`).join('')
-        : `<div style="align-self:flex-start;max-width:92%;background:var(--bg);
-            padding:9px 13px;border-radius:10px;font-size:13px;line-height:1.6;
-            color:var(--text-primary);border:1px solid var(--border);">
-            Hi! I'm your LexDesk assistant.<br/>
-            I can help you navigate the system and answer questions across Indian law.<br/><br/>
-            <strong>Pick a category</strong> or search below.
-          </div>`}
+        ? history.map(m => renderBotBubble(m)).join('')
+        : renderBotBubble({role:'bot', content:`Hi there! 👋 I'm your LexDesk assistant.<br/>I can help you <strong>use the system</strong> and answer <strong>Indian law questions</strong>.<br/><br/>Try typing a question, or pick one below:`})}
     </div>
-    <div style="padding:8px 10px;border-top:1px solid var(--border);">
-      <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input id="chatbot-search" type="text" placeholder="Search all ${totalQs} questions…"
-          style="flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 11px;
-                 font-size:12.5px;outline:none;background:var(--bg);color:var(--text-primary);"
-          oninput="chatbotSearch(this.value)"/>
-        <button onclick="chatbotSearch(document.getElementById('chatbot-search').value)"
-          style="background:var(--navy);border:none;color:var(--gold);border-radius:8px;
-                 padding:0 12px;cursor:pointer;font-size:13px;">
-          <i class="fas fa-search"></i></button>
+
+    ${!history.length ? `
+    <div id="bot-suggestions" style="padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;">
+      ${BOT_SUGGESTIONS.map(s=>`<button onclick="botAskSuggestion(this)" data-q="${escHtml(s)}"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:20px;
+               padding:5px 12px;font-size:11.5px;cursor:pointer;color:var(--text-secondary);
+               transition:all .15s;"
+        onmouseover="this.style.background='var(--gold-pale)';this.style.borderColor='var(--gold)'"
+        onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)'"
+        >${escHtml(s)}</button>`).join('')}
+    </div>` : ''}
+
+    <div style="padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="bot-input" type="text" placeholder="Ask me anything…"
+          style="flex:1;border:1px solid var(--border);border-radius:22px;
+                 padding:9px 16px;font-size:13px;outline:none;
+                 background:var(--bg);color:var(--text-primary);
+                 transition:border .15s;"
+          onfocus="this.style.borderColor='var(--gold)'"
+          onblur="this.style.borderColor='var(--border)'"
+          onkeydown="if(event.key==='Enter')botSend()"/>
+        <button onclick="botSend()"
+          style="width:38px;height:38px;border-radius:50%;background:var(--navy);
+                 border:none;color:var(--gold);cursor:pointer;flex-shrink:0;
+                 display:flex;align-items:center;justify-content:center;font-size:15px;">
+          <i class="fas fa-paper-plane"></i>
+        </button>
       </div>
-      <div id="chatbot-question-area" style="max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
-        ${chatbotCategoryGrid()}
+      <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px;">
+        General guidance only — not a substitute for legal advice
       </div>
     </div>`;
+
   document.body.appendChild(panel);
-  document.getElementById('chatbot-messages').scrollTop = 9999;
+  const msgs = document.getElementById('bot-messages');
+  if(msgs) msgs.scrollTop = msgs.scrollHeight;
+  setTimeout(()=>document.getElementById('bot-input')?.focus(), 100);
 }
 
-function chatbotCategoryGrid(){
-  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-    ${BOT_CATEGORIES.map(cat=>`
-      <button onclick="chatbotSelectCat('${cat.id}')"
-        style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);
-               border-radius:8px;padding:7px 10px;font-size:11.5px;cursor:pointer;color:var(--text-primary);
-               text-align:left;" onmouseover="this.style.background='var(--gold-pale)'"
-        onmouseout="this.style.background='var(--bg)'">
-        <i class="${cat.icon}" style="color:var(--navy-mid);width:13px;flex-shrink:0;"></i>
-        ${cat.label}
-        <span style="margin-left:auto;font-size:10px;color:var(--text-muted);">${BOT_QA[cat.id]?.length||0}</span>
-      </button>`).join('')}
+function renderBotBubble(m){
+  const isMine = m.role==='user';
+  return `<div style="display:flex;flex-direction:column;align-items:${isMine?'flex-end':'flex-start'};">
+    <div style="max-width:85%;padding:9px 13px;border-radius:${isMine?'16px 16px 4px 16px':'16px 16px 16px 4px'};
+      background:${isMine?'var(--navy)':'var(--bg)'};
+      color:${isMine?'#fff':'var(--text-primary)'};
+      font-size:13px;line-height:1.55;
+      ${!isMine?'border:1px solid var(--border);':''}">${m.content}</div>
   </div>`;
 }
 
-function chatbotSelectCat(catId){
-  _botCurrentCat = catId;
-  const cat = BOT_CATEGORIES.find(c=>c.id===catId);
-  const qa = BOT_QA[catId]||[];
-  const area = document.getElementById('chatbot-question-area');
-  if(!area) return;
-  area.innerHTML = `
-    <button onclick="chatbotBackToCategories()"
-      style="display:flex;align-items:center;gap:6px;background:none;border:none;
-             color:var(--navy-mid);font-size:12px;cursor:pointer;padding:4px 2px;margin-bottom:2px;">
-      <i class="fas fa-arrow-left"></i> Back
-    </button>
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;
-         color:var(--text-muted);padding:2px 0 4px;">
-      <i class="${cat?.icon}"></i> ${cat?.label} (${qa.length})
-    </div>
-    ${qa.map((item,i)=>`
-      <button data-cat="${catId}" data-idx="${i}"
-        onclick="chatbotAnswer(this.dataset.cat,parseInt(this.dataset.idx))"
-        style="text-align:left;background:var(--bg);border:1px solid var(--border);
-               border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;
-               color:var(--text-primary);width:100%;line-height:1.4;"
-        onmouseover="this.style.background='var(--bg-card)'"
-        onmouseout="this.style.background='var(--bg)'">
-        ${escHtml(item.q)}
-      </button>`).join('')}`;
-}
-
-function chatbotBackToCategories(){
-  _botCurrentCat = null;
-  const area = document.getElementById('chatbot-question-area');
-  if(area) area.innerHTML = chatbotCategoryGrid();
-  const s = document.getElementById('chatbot-search');
-  if(s) s.value='';
-}
-
-function chatbotSearch(query){
-  const q = (query||'').toLowerCase().trim();
-  const area = document.getElementById('chatbot-question-area');
-  if(!area) return;
-  if(!q){ area.innerHTML = chatbotCategoryGrid(); return; }
-  const results=[];
-  Object.entries(BOT_QA).forEach(([catId,items])=>{
-    const cat=BOT_CATEGORIES.find(c=>c.id===catId);
-    items.forEach((item,i)=>{
-      if(item.q.toLowerCase().includes(q)||item.a.toLowerCase().replace(/<[^>]+>/g,' ').includes(q))
-        results.push({catId,i,item,cat});
-    });
-  });
-  if(!results.length){
-    area.innerHTML=`<p style="font-size:12.5px;color:var(--text-muted);padding:8px 2px;">
-      No results for "${escHtml(q)}" — try different keywords.</p>`;
-    return;
-  }
-  area.innerHTML=`
-    <div style="font-size:11px;color:var(--text-muted);padding:2px 0 4px;">${results.length} result${results.length!==1?'s':''}</div>
-    ${results.map(r=>`
-      <button data-cat="${r.catId}" data-idx="${r.i}"
-        onclick="chatbotAnswer(this.dataset.cat,parseInt(this.dataset.idx))"
-        style="text-align:left;background:var(--bg);border:1px solid var(--border);
-               border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;
-               color:var(--text-primary);width:100%;">
-        <span style="font-size:10px;color:var(--text-muted);">${r.cat?.label}</span><br/>
-        ${escHtml(r.item.q)}
-      </button>`).join('')}`;
-}
-
-function chatbotAnswer(catId, idx){
-  const item = BOT_QA[catId]?.[idx];
-  if(!item) return;
-  const history = JSON.parse(localStorage.getItem(CHATBOT_KEY)||'[]');
-  history.push({role:'user', content:escHtml(item.q)});
-  history.push({role:'bot',  content:item.a});
-  if(history.length>80) history.splice(0,history.length-80);
-  localStorage.setItem(CHATBOT_KEY, JSON.stringify(history));
-  const msgs = document.getElementById('chatbot-messages');
+function botAddMessage(role, content){
+  const msgs = document.getElementById('bot-messages');
   if(!msgs) return;
-  msgs.insertAdjacentHTML('beforeend', `
-    <div style="align-self:flex-end;max-width:92%;background:var(--navy);color:#fff;
-        padding:8px 12px;border-radius:10px;font-size:13px;">${escHtml(item.q)}</div>
-    <div style="align-self:flex-start;max-width:92%;background:var(--bg);
-        color:var(--text-primary);padding:10px 13px;border-radius:10px;
-        font-size:13px;line-height:1.6;border:1px solid var(--border);">
-      ${item.a}
-      <div style="font-size:10px;color:var(--text-muted);margin-top:8px;padding-top:6px;
-           border-top:1px solid var(--border-light);font-style:italic;">
-        ⚠ General guidance only. Consult a qualified lawyer for advice specific to your situation.
-      </div>
-    </div>`);
+  // Hide suggestions once user sends first message
+  document.getElementById('bot-suggestions')?.remove();
+  msgs.insertAdjacentHTML('beforeend', renderBotBubble({role,content}));
   msgs.scrollTop = msgs.scrollHeight;
-  const area = document.getElementById('chatbot-question-area');
-  if(area) area.innerHTML=`
-    <button onclick="${_botCurrentCat?`chatbotSelectCat('${_botCurrentCat}')`:'chatbotBackToCategories()'}"
-      style="display:flex;align-items:center;gap:6px;background:none;border:none;
-             color:var(--navy-mid);font-size:12.5px;cursor:pointer;padding:6px 2px;">
-      <i class="fas fa-arrow-left"></i> More questions
-    </button>`;
+  // Persist
+  const history = JSON.parse(localStorage.getItem(BOT_KEY)||'[]');
+  history.push({role,content});
+  if(history.length>100) history.splice(0,history.length-100);
+  localStorage.setItem(BOT_KEY, JSON.stringify(history));
+}
+
+function botAskSuggestion(btn){
+  const q = btn.dataset.q;
+  if(!q) return;
+  document.getElementById('bot-suggestions')?.remove();
+  botAskQuestion(q);
+}
+
+function botSend(){
+  const input = document.getElementById('bot-input');
+  const text = (input?.value||'').trim();
+  if(!text) return;
+  input.value='';
+  botAskQuestion(text);
+}
+
+// ── Match user query against knowledge base ───────────────────────────────
+function botFindAnswer(query){
+  const q = query.toLowerCase();
+  let best = null, bestScore = 0;
+
+  BOT_KB.forEach(entry=>{
+    let score = 0;
+    // Keyword matching (higher weight)
+    entry.keywords.forEach(kw=>{
+      if(q.includes(kw)) score += 3;
+      else {
+        // Partial word matching
+        const words = kw.split(' ');
+        words.forEach(w=>{ if(w.length>3&&q.includes(w)) score+=1; });
+      }
+    });
+    // Question text matching
+    const qWords = entry.q.toLowerCase().split(/\W+/).filter(w=>w.length>3);
+    qWords.forEach(w=>{ if(q.includes(w)) score+=1; });
+    if(score>bestScore){ bestScore=score; best=entry; }
+  });
+
+  return bestScore>=2 ? best : null;
+}
+
+// ── Typing indicator ──────────────────────────────────────────────────────
+function botShowTyping(){
+  const msgs=document.getElementById('bot-messages');
+  if(!msgs) return;
+  const el=document.createElement('div');
+  el.id='bot-typing';
+  el.style.cssText='display:flex;align-items:center;gap:4px;padding:8px 13px;background:var(--bg);border:1px solid var(--border);border-radius:16px 16px 16px 4px;width:fit-content;';
+  el.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:var(--text-muted);animation:botdot 1.2s infinite;"></span>
+    <span style="width:7px;height:7px;border-radius:50%;background:var(--text-muted);animation:botdot 1.2s .2s infinite;"></span>
+    <span style="width:7px;height:7px;border-radius:50%;background:var(--text-muted);animation:botdot 1.2s .4s infinite;"></span>`;
+  msgs.appendChild(el);
+  msgs.scrollTop=msgs.scrollHeight;
+  // Inject keyframes once
+  if(!document.getElementById('bot-style')){
+    const s=document.createElement('style');
+    s.id='bot-style';
+    s.textContent='@keyframes botdot{0%,80%,100%{transform:scale(0.7);opacity:.5}40%{transform:scale(1);opacity:1}}';
+    document.head.appendChild(s);
+  }
+}
+function botHideTyping(){ document.getElementById('bot-typing')?.remove(); }
+
+// ── Main ask function ─────────────────────────────────────────────────────
+function botAskQuestion(query){
+  botAddMessage('user', escHtml(query));
+  botShowTyping();
+
+  // Short delay to feel natural
+  setTimeout(()=>{
+    botHideTyping();
+    const match = botFindAnswer(query);
+    if(match){
+      botAddMessage('bot', match.a);
+      // Offer related suggestions
+      const related = BOT_KB
+        .filter(e=>e!==match && e.cat===match.cat)
+        .slice(0,3);
+      if(related.length){
+        const msgs=document.getElementById('bot-messages');
+        if(msgs){
+          const div=document.createElement('div');
+          div.style.cssText='display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;';
+          div.innerHTML=related.map(r=>`<button onclick="botAskSuggestion(this)" data-q="${escHtml(r.q)}"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:16px;
+                   padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text-secondary);"
+            onmouseover="this.style.background='var(--gold-pale)'"
+            onmouseout="this.style.background='var(--bg)'">${escHtml(r.q)}</button>`).join('');
+          msgs.appendChild(div);
+          msgs.scrollTop=msgs.scrollHeight;
+        }
+      }
+    } else {
+      // Fuzzy fallback — suggest closest matches
+      const tokens=query.toLowerCase().split(/\W+/).filter(w=>w.length>2);
+      const candidates=BOT_KB.filter(e=>
+        tokens.some(t=>e.keywords.some(kw=>kw.includes(t))||e.q.toLowerCase().includes(t))
+      ).slice(0,4);
+      if(candidates.length){
+        const msgs=document.getElementById('bot-messages');
+        if(msgs){
+          msgs.insertAdjacentHTML('beforeend',renderBotBubble({role:'bot',
+            content:`I'm not sure I caught that exactly. Did you mean one of these?`}));
+          const div=document.createElement('div');
+          div.style.cssText='display:flex;flex-direction:column;gap:5px;margin-top:2px;';
+          div.innerHTML=candidates.map(r=>`<button onclick="botAskSuggestion(this)" data-q="${escHtml(r.q)}"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:10px;
+                   padding:7px 11px;font-size:12px;cursor:pointer;color:var(--text-primary);text-align:left;"
+            onmouseover="this.style.background='var(--gold-pale)'"
+            onmouseout="this.style.background='var(--bg)'">${escHtml(r.q)}</button>`).join('');
+          msgs.appendChild(div);
+          msgs.scrollTop=msgs.scrollHeight;
+        }
+      } else {
+        botAddMessage('bot',
+          `I don't have a specific answer for that yet. Try asking about:<br/>
+          • System features (clients, tasks, finances, notes, portal)<br/>
+          • Civil, criminal, cyber, family, labour, tax, or IP law<br/>
+          • Constitutional or consumer law<br/><br/>
+          Or rephrase your question and I'll do my best!`);
+      }
+    }
+  }, 600+Math.random()*400);  // 600-1000ms — feels natural
 }
 </script>
 <script>
