@@ -307,7 +307,27 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .fin-badge-partial{background:var(--warning-bg);color:var(--warning);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
 .fin-badge-unpaid{background:var(--danger-bg);color:var(--danger);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
 @media(max-width:1024px){.cal-layout{grid-template-columns:1fr}.cal-detail-panel{position:static;max-height:none}.fin-summary-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.cal-cell{min-height:52px;padding:3px 4px}.cal-event-pill{display:none}.fin-summary-grid{grid-template-columns:1fr}}
+@media(max-width:768px){
+  /* Chat — stack sidebar on top, hide it when message is open */
+  .chat-layout{flex-direction:column;}
+  .chat-layout > div:first-child{width:100%!important;max-height:160px;border-right:none!important;border-bottom:1px solid var(--border);}
+  .chat-sidebar{width:100%!important;display:flex;overflow-x:auto;overflow-y:hidden!important;flex-direction:row!important;padding:6px 8px;gap:8px;}
+  .chat-contact{flex-direction:column;align-items:center;min-width:60px;padding:8px 4px!important;text-align:center;border-bottom:none!important;border-right:1px solid var(--border-light);}
+  .chat-contact:last-child{border-right:none;}
+  .chat-contact-name{font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56px;}
+  /* Kanban — horizontal scroll */
+  .kanban-board{overflow-x:auto;display:flex;gap:10px;padding-bottom:8px;}
+  .kanban-col{min-width:240px;flex-shrink:0;}
+  /* Calendar */
+  .cal-layout{grid-template-columns:1fr;}
+  .cal-cell{min-height:52px;padding:3px 4px;}
+  .cal-event-pill{display:none;}
+  /* Finances */
+  .fin-summary-grid{grid-template-columns:1fr;}
+  /* Modals */
+  .modal{max-height:95vh;margin:0 8px;}
+  .form-grid-2{grid-template-columns:1fr!important;}
+}
 .settings-wrap{display:flex;flex-direction:column;gap:18px;max-width:760px}
 .settings-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .settings-section-head{padding:14px 18px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px}
@@ -1291,12 +1311,12 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
   <div class="modal" style="max-width:480px;">
     <div class="modal-header"><div><div class="modal-title">New Group Chat</div></div><button class="modal-close" onclick="closeModal('modal-create-group')">&times;</button></div>
     <div class="modal-body">
-      <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Group Name <span class="required">*</span></label><input class="form-control" id="grp-name" type="text" placeholder="e.g. Cyber Team"/></div>
-      <div class="form-group"><label class="form-label">Add Members</label><div class="form-hint mb-3">Senior Advocates are always included as group admins.</div><div id="grp-member-checks" style="max-height:200px;overflow-y:auto;padding:4px 0;"></div></div>
+      <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Group Name <span class="required">*</span></label><input class="form-control" id="new-group-name" type="text" placeholder="e.g. Cyber Team" onkeydown="if(event.key==='Enter')createGroup()"/></div>
+      <div class="form-group"><label class="form-label">Add Members</label><div class="form-hint mb-3">Senior Advocates are always included as group admins.</div><div id="new-group-members" style="max-height:200px;overflow-y:auto;padding:4px 0;"></div></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-create-group')">Cancel</button>
-      <button class="btn btn-gold" onclick="createChatGroup()"><i class="fas fa-users"></i> Create Group</button>
+      <button class="btn btn-gold" onclick="createGroup()"><i class="fas fa-users"></i> Create Group</button>
     </div>
   </div>
 </div>
@@ -3863,251 +3883,306 @@ async function oneDriveGetFileLink(path){
 </script>
 <script>
 // ════════════════════════════════════════════
-//  NOTIFICATIONS, UNREAD COUNTS & SMART POLLING
+//  NOTIFICATIONS + REAL-TIME UPDATES
 // ════════════════════════════════════════════
 // Architecture:
-//   • Background poll every 30s checks for new messages & tasks.
-//   • When chat or tasks view is ACTIVE, tightens to 5s.
-//   • S.locallyReadIds: Set of message IDs the current user has
-//     already seen this session. refreshUnreadCounts() subtracts
-//     these BEFORE computing badge values — eliminates the race
-//     condition where a fresh DB query would re-show a badge for
-//     a conversation the user just opened.
-//   • S.unreadCounts: { 'broadcast': N, [senderId]: N }
-//   • Browser push notifications fire even when tab is backgrounded.
+//   • Supabase Realtime WebSocket subscriptions for instant
+//     updates to messages and tasks (< 1 second delivery).
+//   • Background poll every 30s as a safety net for anything
+//     Realtime misses (tab backgrounded, reconnect gap, etc.).
+//   • Unread badge counts tracked via S.locallyReadIds (session-
+//     local Set) to prevent badge re-appearing after the user
+//     has already seen a conversation.
+//   • Browser push notifications fire even when tab is hidden.
 
 S.unreadCounts   = S.unreadCounts   || {};
-S.locallyReadIds = S.locallyReadIds || new Set();  // session-local read receipt cache
+S.locallyReadIds = S.locallyReadIds || new Set();
+S.messageReadIds = S.messageReadIds || new Set();
 S.lastSeenTaskTs = S.lastSeenTaskTs || localStorage.getItem('ld_last_task_ts') || '';
 S.notifPermission= S.notifPermission|| Notification.permission;
 S._pollTimer     = null;
-S._fastPollTimer = null;
+S._realtimeChannel = null;  // single Supabase Realtime channel
 
 // ── Browser push permission ───────────────────────────────────────────────
 async function requestNotifPermission(){
   if(S.notifPermission==='granted') return true;
   if(S.notifPermission==='denied')  return false;
-  const result=await Notification.requestPermission();
-  S.notifPermission=result;
-  return result==='granted';
+  const result = await Notification.requestPermission();
+  S.notifPermission = result;
+  return result === 'granted';
 }
-
-function sendBrowserNotif(title,body,onClick){
+function sendBrowserNotif(title, body, onClick){
   if(S.notifPermission!=='granted') return;
-  const n=new Notification(title,{
-    body, icon:'/favicon.ico', badge:'/favicon.ico', tag:title
-  });
+  const n = new Notification(title,{body, icon:'/favicon.ico', tag:title});
   if(onClick) n.onclick=()=>{ window.focus(); onClick(); n.close(); };
 }
 
-// ── Persist last-seen message state across page reloads ───────────────────
+// ── Last-seen persistence ─────────────────────────────────────────────────
 function loadLastSeenState(){
-  try{
-    const stored=JSON.parse(localStorage.getItem('ld_last_seen_msgs')||'{}');
-    S.lastSeenMsgId=stored;
-  }catch{ S.lastSeenMsgId={}; }
+  try{ S.lastSeenMsgId=JSON.parse(localStorage.getItem('ld_last_seen_msgs')||'{}'); }
+  catch{ S.lastSeenMsgId={}; }
 }
 function saveLastSeenState(){
-  try{ localStorage.setItem('ld_last_seen_msgs',JSON.stringify(S.lastSeenMsgId)); }
-  catch{}
+  try{ localStorage.setItem('ld_last_seen_msgs',JSON.stringify(S.lastSeenMsgId)); }catch{}
 }
 
-// ── Mark a conversation as read ───────────────────────────────────────────
-// Immediately updates both the local Set and the badge, then
-// asynchronously writes to the DB. The local Set prevents any
-// in-flight or subsequent poll from re-showing these as unread.
+// ── Mark conversation as read ─────────────────────────────────────────────
 async function markConversationRead(peerId){
-  const key=peerId===null?'broadcast':peerId;
+  const key = peerId===null ? 'broadcast' : peerId;
   if(!S.messages.length) return;
-
-  // Add every visible received message to the session-local read set
-  const inbound=S.messages.filter(m=>m.sender_id!==S.user?.id && !m.deleted);
+  const inbound = S.messages.filter(m=>m.sender_id!==S.user?.id && !m.deleted);
   inbound.forEach(m=>S.locallyReadIds.add(m.id));
-
-  // Update last-seen pointer
-  const latest=S.messages[S.messages.length-1];
+  const latest = S.messages[S.messages.length-1];
   if(latest){ S.lastSeenMsgId[key]=latest.id; saveLastSeenState(); }
-
-  // Clear badge immediately — before any DB round-trip
   S.unreadCounts[key]=0;
   updateAllChatBadges();
-
-  // Persist read receipts to DB (fire-and-forget; the local Set handles UI)
   if(inbound.length){
     sb.from('message_reads').upsert(
       inbound.map(m=>({message_id:m.id, user_id:S.user.id})),
       {onConflict:'message_id,user_id', ignoreDuplicates:true}
-    ).then(({error})=>{ if(error) console.warn('message_reads upsert:',error.message); });
+    ).then(({error})=>{ if(error) console.warn('message_reads:',error.message); });
   }
 }
 
-// ── Compute unread counts ─────────────────────────────────────────────────
-// Uses two queries (Supabase JS doesn't support true subqueries) but
-// immediately subtracts S.locallyReadIds so a just-opened conversation
-// never flashes a badge again even before the DB write completes.
+// ── Unread count computation ──────────────────────────────────────────────
 async function refreshUnreadCounts(){
   if(!S.user) return null;
-
-  // 1. Fetch read receipt IDs from DB
-  const {data:readRows}=await sb.from('message_reads')
+  const {data:readRows} = await sb.from('message_reads')
     .select('message_id').eq('user_id',S.user.id);
-  const dbReadSet=new Set((readRows||[]).map(r=>r.message_id));
-
-  // 2. Combine DB set + session-local set (handles the race window)
-  const allReadIds=new Set([...dbReadSet,...S.locallyReadIds]);
-
-  // 3. Fetch recent visible messages not sent by me
-  const {data:allVisible}=await sb.from('messages')
+  const dbReadSet = new Set((readRows||[]).map(r=>r.message_id));
+  const allReadIds = new Set([...dbReadSet,...S.locallyReadIds]);
+  const {data:allVisible} = await sb.from('messages')
     .select('id,sender_id,recipient_id,created_at')
     .neq('sender_id',S.user.id)
     .eq('deleted',false)
     .order('created_at',{ascending:false})
     .limit(500);
-
   const newCounts={};
   (allVisible||[]).forEach(m=>{
-    if(allReadIds.has(m.id)) return;   // already seen — skip
-    const key=m.recipient_id===null?'broadcast':m.sender_id;
+    if(allReadIds.has(m.id)) return;
+    const key = m.recipient_id===null ? 'broadcast' : m.sender_id;
     newCounts[key]=(newCounts[key]||0)+1;
   });
-
   const prevCounts={...S.unreadCounts};
   S.unreadCounts=newCounts;
   updateAllChatBadges();
   return {newCounts,prevCounts};
 }
 
-// ── Update every badge in the sidebar + chat contact list ─────────────────
+// ── Update sidebar + contact badges ──────────────────────────────────────
 function updateAllChatBadges(){
   const total=Object.values(S.unreadCounts).reduce((a,b)=>a+(b||0),0);
-
-  // Sidebar nav badge
   const chatNavBadge=document.getElementById('chat-nav-badge');
   if(chatNavBadge){
     chatNavBadge.textContent=total||'';
     chatNavBadge.style.display=total?'inline-block':'none';
   }
-
-  // Per-contact badges in the chat sidebar
   (S.users||[]).filter(u=>u.id!==S.user?.id).forEach(u=>{
     const badge=document.getElementById(`chat-badge-${u.id}`);
     const count=S.unreadCounts[u.id]||0;
-    if(badge){
-      badge.textContent=count||'';
-      badge.style.display=count?'inline-flex':'none';
-    }
+    if(badge){ badge.textContent=count||''; badge.style.display=count?'inline-flex':'none'; }
   });
-  const broadcastBadge=document.getElementById('chat-badge-broadcast');
+  const bbc=document.getElementById('chat-badge-broadcast');
   const bc=S.unreadCounts['broadcast']||0;
-  if(broadcastBadge){
-    broadcastBadge.textContent=bc||'';
-    broadcastBadge.style.display=bc?'inline-flex':'none';
-  }
+  if(bbc){ bbc.textContent=bc||''; bbc.style.display=bc?'inline-flex':'none'; }
 }
 
-// ── Check for new items and fire notifications ────────────────────────────
+// ── Notify about genuinely new items ─────────────────────────────────────
 async function checkForNewItems(){
   if(!S.user) return;
-  const result=await refreshUnreadCounts();
+  const result = await refreshUnreadCounts();
   if(!result) return;
-  const {newCounts,prevCounts}=result;
-
-  // New messages — notify per conversation that grew
+  const {newCounts, prevCounts} = result;
   for(const [key,count] of Object.entries(newCounts)){
-    const prev=prevCounts[key]||0;
+    const prev = prevCounts[key]||0;
     if(count<=prev) continue;
-    const delta=count-prev;
-    const label=key==='broadcast'?'Team Channel':
-      (S.users.find(u=>u.id===key)?.full_name||'Someone');
-    const granted=await requestNotifPermission();
-    if(granted){
-      sendBrowserNotif(
-        `${delta} new message${delta>1?'s':''} — ${label}`,
-        'LexDesk · tap to open',
-        ()=>{ navigate('chat'); selectChatPeer(key==='broadcast'?null:key); }
-      );
-    }
-    if(!document.getElementById('view-chat')?.classList.contains('active')){
+    const delta = count-prev;
+    const label = key==='broadcast' ? 'Team Channel'
+      : (S.users.find(u=>u.id===key)?.full_name||'Someone');
+    const granted = await requestNotifPermission();
+    if(granted) sendBrowserNotif(
+      `${delta} new message${delta>1?'s':''} — ${label}`,
+      'LexDesk · tap to open',
+      ()=>{ navigate('chat'); selectChatPeer(key==='broadcast'?null:key); }
+    );
+    if(!document.getElementById('view-chat')?.classList.contains('active'))
       showToast(`💬 ${delta} new message${delta>1?'s':''} from ${label}`,'info');
-    }
   }
-
-  // New tasks assigned to me
-  if(S.lastSeenTaskTs){
-    const {data:newTasks}=await sb.from('tasks')
-      .select('id,title,assigned_by')
-      .eq('assigned_to',S.user.id)
-      .gt('created_at',S.lastSeenTaskTs);
-    if(newTasks?.length){
-      const granted=await requestNotifPermission();
-      newTasks.forEach(t=>{
-        const by=S.users.find(u=>u.id===t.assigned_by)?.full_name||'Senior Advocate';
-        if(granted) sendBrowserNotif(`New task from ${by}`,t.title,
-          ()=>{ navigate('tasks'); openTaskModal(t.id); });
-        if(!document.getElementById('view-tasks')?.classList.contains('active'))
-          showToast(`📋 New task from ${by}: "${escHtml(t.title)}"`,'info');
-      });
-    }
-  }
-
-  // Task status changes for me (rework, approval, etc.)
-  if(S.lastSeenTaskTs){
-    const {data:changes}=await sb.from('tasks')
-      .select('id,title,status,assigned_by,assigned_to')
-      .eq('assigned_to',S.user.id)
-      .gt('updated_at',S.lastSeenTaskTs)
-      .not('status','eq','open');
-    if(changes?.length){
-      const granted=await requestNotifPermission();
-      changes.forEach(t=>{
-        const lbl={in_progress:'started',in_review:'under review',done:'approved & closed',
-          cancelled:'cancelled'}[t.status]||t.status;
-        if(granted) sendBrowserNotif(`Task ${lbl}`,t.title,
-          ()=>{ navigate('tasks'); openTaskModal(t.id); });
-        if(!document.getElementById('view-tasks')?.classList.contains('active'))
-          showToast(`Task "${escHtml(t.title)}" — ${lbl}`,'info');
-      });
-    }
-  }
-
   S.lastSeenTaskTs=new Date().toISOString();
   localStorage.setItem('ld_last_task_ts',S.lastSeenTaskTs);
 }
 
-// ── Smart polling ─────────────────────────────────────────────────────────
-// 30s background poll — always active, keeps badges fresh and fires
-// notifications even when the user is on a non-chat/tasks view.
-// 5s fast poll — only runs while chat or tasks view is visible.
+// ── Supabase Realtime subscriptions ──────────────────────────────────────
+// One channel for both messages and tasks. Delivers updates in < 1 second.
+// NOTE: Supabase Realtime requires the table to have RLS enabled and
+// "Realtime" turned ON in the Supabase dashboard:
+//   Database → Replication → select "messages" and "tasks" tables.
 function startPolling(){
+  // ── Clean up any old timers/channels ──
   if(S._pollTimer)     clearInterval(S._pollTimer);
-  if(S._fastPollTimer) clearInterval(S._fastPollTimer);
+  if(S._realtimeChannel){ try{ sb.removeChannel(S._realtimeChannel); }catch{} }
 
-  // Background: 30s — notifications + task data refresh
-  S._pollTimer=setInterval(async ()=>{
+  // ── Supabase Realtime channel ──────────────────────────────────────────
+  S._realtimeChannel = sb
+    .channel('lexdesk-live')
+
+    // ── New message received ──────────────────────────────────────────────
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},
+      async (payload)=>{
+        const msg = payload.new;
+        if(!msg||!S.user) return;
+        const isForMe = msg.sender_id===S.user.id
+          || msg.recipient_id===S.user.id
+          || msg.recipient_id===null
+          || (msg.group_id && S.chatGroups?.some(g=>g.id===msg.group_id));
+        if(!isForMe) return;
+
+        // If I'm currently viewing this conversation — reload and render instantly
+        const chatActive = document.getElementById('view-chat')?.classList.contains('active');
+        const correctConvo = chatActive && (
+          (S.activeChatPeer===null && msg.recipient_id===null && !msg.group_id) ||
+          (S.activeChatPeer===msg.sender_id) ||
+          (S.activeChatPeer===msg.recipient_id && msg.sender_id===S.user.id) ||
+          (S.activeGroupId && S.activeGroupId===msg.group_id)
+        );
+        if(correctConvo){
+          await loadMessages();
+          renderChatMessages();
+          if(msg.sender_id!==S.user.id) await markConversationRead(S.activeChatPeer);
+        } else {
+          // Update badge — add to unread
+          if(msg.sender_id!==S.user.id && !S.locallyReadIds.has(msg.id)){
+            const key = msg.group_id
+              ? msg.group_id
+              : msg.recipient_id===null ? 'broadcast' : msg.sender_id;
+            S.unreadCounts[key] = (S.unreadCounts[key]||0)+1;
+            updateAllChatBadges();
+          }
+          // Browser notification for non-active conversations
+          if(msg.sender_id!==S.user.id){
+            const sender = S.users.find(u=>u.id===msg.sender_id);
+            const from   = sender?.full_name || 'Someone';
+            const granted= await requestNotifPermission();
+            if(granted) sendBrowserNotif(`💬 ${from}`,
+              msg.body?.slice(0,80)||'Sent an attachment',
+              ()=>{ navigate('chat'); selectChatPeer(msg.sender_id); }
+            );
+            if(!chatActive) showToast(`💬 ${from}: ${(msg.body||'').slice(0,50)}`,'info');
+          }
+        }
+      })
+
+    // ── Message edited or deleted ─────────────────────────────────────────
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},
+      async ()=>{
+        const chatActive = document.getElementById('view-chat')?.classList.contains('active');
+        if(!chatActive) return;
+        await loadMessages();
+        renderChatMessages();
+      })
+
+    // ── New task created ──────────────────────────────────────────────────
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'tasks'},
+      async (payload)=>{
+        const t = payload.new;
+        if(!t||!S.user) return;
+        const involvesMe = isAdmin()||t.assigned_to===S.user.id||t.assigned_by===S.user.id;
+        if(!involvesMe) return;
+        // Reload tasks data
+        const {data} = await sb.from('tasks').select('*').order('created_at',{ascending:false});
+        if(data) S.tasks=data;
+        // Re-render if tasks view is open
+        if(document.getElementById('view-tasks')?.classList.contains('active')) renderTasks();
+        updateStats();
+        // Notify non-admin who was assigned
+        if(t.assigned_to===S.user.id && t.assigned_by!==S.user.id){
+          const by = S.users.find(u=>u.id===t.assigned_by)?.full_name||'Senior Advocate';
+          const granted = await requestNotifPermission();
+          if(granted) sendBrowserNotif(`📋 New task from ${by}`,t.title,
+            ()=>{ navigate('tasks'); openTaskModal(t.id); });
+          showToast(`📋 New task from ${by}: "${escHtml(t.title)}"`,'info');
+        }
+      })
+
+    // ── Task updated (status change) ──────────────────────────────────────
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'tasks'},
+      async (payload)=>{
+        const t = payload.new;
+        if(!t||!S.user) return;
+        const involvesMe = isAdmin()||t.assigned_to===S.user.id||t.assigned_by===S.user.id;
+        if(!involvesMe) return;
+        // Update the task in local cache without full reload
+        const idx = S.tasks.findIndex(x=>x.id===t.id);
+        if(idx>=0) S.tasks[idx]=t; else S.tasks.unshift(t);
+        if(document.getElementById('view-tasks')?.classList.contains('active')) renderTasks();
+        updateStats();
+        // Notify assignee of status changes
+        if(t.assigned_to===S.user.id){
+          const lbl={in_progress:'started',in_review:'sent for review',
+            done:'approved & closed',cancelled:'cancelled',open:'reopened'}[t.status];
+          if(lbl&&t.status!=='in_progress'){  // skip trivial "started" notification
+            const granted = await requestNotifPermission();
+            if(granted) sendBrowserNotif(`Task ${lbl}`,t.title,
+              ()=>{ navigate('tasks'); openTaskModal(t.id); });
+            if(!document.getElementById('view-tasks')?.classList.contains('active'))
+              showToast(`Task "${escHtml(t.title)}" — ${lbl}`,'info');
+          }
+        }
+        // Notify Senior Advocate when task sent for review
+        if(isAdmin() && t.status==='in_review'){
+          const doer = S.users.find(u=>u.id===t.assigned_to);
+          const granted = await requestNotifPermission();
+          if(granted) sendBrowserNotif(`🔍 Review requested`,
+            `${doer?.full_name||'Someone'} sent "${t.title}" for review`,
+            ()=>{ navigate('tasks'); openTaskModal(t.id); });
+          if(!document.getElementById('view-tasks')?.classList.contains('active'))
+            showToast(`🔍 ${doer?.full_name||'Someone'} sent "${escHtml(t.title)}" for review`,'warning');
+        }
+      })
+
+    .subscribe((status)=>{
+      if(status==='SUBSCRIBED'){
+        console.log('LexDesk Realtime: connected ✓');
+      } else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
+        console.warn('LexDesk Realtime: connection issue, falling back to polling');
+        // If Realtime fails, fall back to aggressive polling
+        startFallbackPolling();
+      }
+    });
+
+  // ── Background safety-net poll (30s) ─────────────────────────────────────
+  // Catches anything Realtime might miss when tab is backgrounded for a long time
+  S._pollTimer = setInterval(async ()=>{
     if(!S.user) return;
     await checkForNewItems();
-    if(!document.getElementById('view-tasks')?.classList.contains('active')){
-      const {data}=await sb.from('tasks').select('*').order('created_at',{ascending:false});
-      if(data){ S.tasks=data; updateStats(); }
-    }
-  },30000);
+    // Refresh task data in background (Realtime keeps it current, this is backup)
+    const {data} = await sb.from('tasks').select('*').order('created_at',{ascending:false});
+    if(data){ S.tasks=data; updateStats(); }
+  }, 30000);
+}
 
-  // Fast: 5s — only when chat or tasks is the active view
-  S._fastPollTimer=setInterval(async ()=>{
+// ── Fallback polling (if Realtime is not enabled on the Supabase project) ──
+// Activated automatically if Realtime subscription fails.
+// Polls every 5s for messages when chat is active, 10s for tasks.
+function startFallbackPolling(){
+  if(S._fallbackTimer) return;  // already running
+  console.warn('LexDesk: running in fallback poll mode (5s/10s)');
+  S._fallbackTimer = setInterval(async ()=>{
     if(!S.user) return;
-    const chatActive =document.getElementById('view-chat') ?.classList.contains('active');
-    const tasksActive=document.getElementById('view-tasks')?.classList.contains('active');
+    const chatActive  = document.getElementById('view-chat')?.classList.contains('active');
+    const tasksActive = document.getElementById('view-tasks')?.classList.contains('active');
     if(chatActive){
       await loadMessages();
-      renderChatMessages();   // re-renders read-receipt ticks as new reads arrive
+      renderChatMessages();
       await refreshUnreadCounts();
       updateAllChatBadges();
     }
     if(tasksActive){
-      const {data}=await sb.from('tasks').select('*').order('created_at',{ascending:false});
+      const {data} = await sb.from('tasks').select('*').order('created_at',{ascending:false});
       if(data){ S.tasks=data; renderTasks(); updateStats(); }
     }
-  },5000);
+    await checkForNewItems();
+  }, 5000);
 }
 </script>
 <script>
@@ -5864,6 +5939,7 @@ function applyFinancesVisibility(){
     el.style.display = (isAdmin()||canViewFinances()) ? '' : 'none';
   });
 }
+</script>
 
 // ── UI aliases for HTML onclick handlers ──────────────────────────────────
 // These thin wrappers bridge HTML onclicks to the underlying functions.
@@ -5881,10 +5957,12 @@ function toggleChatbotSetting(btn){
 
 // ── Group chat UI wrappers (called from modal HTML) ───────────────────────
 async function createChatGroup(){
-  const name=(document.getElementById('new-group-name')?.value||'').trim();
-  if(!name){showToast('Group name is required.','error');return;}
-  const checkboxes=document.querySelectorAll('.new-group-member-cb:checked');
-  const memberIds=[...checkboxes].map(cb=>cb.value);
+  // IDs match the modal: id="grp-name" and class="grp-member-cb"
+  const nameEl = document.getElementById('grp-name');
+  const name = (nameEl?.value||'').trim();
+  if(!name){ showToast('Group name is required.','error'); if(nameEl) nameEl.focus(); return; }
+  const checkboxes = document.querySelectorAll('.grp-member-cb:checked');
+  const memberIds = [...checkboxes].map(cb=>cb.value);
   if(!memberIds.length){showToast('Select at least one member.','error');return;}
   // Create group
   const {data:group,error}=await sb.from('chat_groups')
@@ -5950,9 +6028,6 @@ async function deleteGroup(){
   renderChatContacts();
   showToast('Group deleted.','warning');
 }
-</script>
-
-  
 <script>
 // ════════════════════════════════════════════
 //  LEXDESK ASSISTANT — conversational chat UI
@@ -6168,9 +6243,15 @@ function isChatbotEnabled(){
 }
 function setChatbotEnabled(val){
   localStorage.setItem('ld_chatbot_enabled', String(val));
-  if(val) renderChatbotButton();
-  else {
-    document.getElementById('chatbot-btn')?.remove();
+  if(val){
+    // Show button — create if doesn't exist, else just make visible
+    const existing = document.getElementById('chatbot-btn');
+    if(existing){ existing.style.display='flex'; }
+    else { renderChatbotButton(); }
+  } else {
+    // Hide button and close panel
+    const btn = document.getElementById('chatbot-btn');
+    if(btn) btn.style.display='none';
     document.getElementById('chatbot-panel')?.remove();
     _botOpen = false;
   }
@@ -6247,9 +6328,18 @@ function openChatbot(){
 
   const panel = document.createElement('div');
   panel.id = 'chatbot-panel';
+  // Mobile-responsive: full-width on small screens, floating on desktop
+  const isMobile = window.innerWidth <= 500;
+  const panelW   = isMobile ? (window.innerWidth - 16) : 350;
+  const panelR   = isMobile ? 8 : Math.min(bR, window.innerWidth - panelW - 8);
+  const panelB   = isMobile ? bB + 58 : bB + 58;
   Object.assign(panel.style, {
-    position:'fixed', bottom:(bB+58)+'px', right:bR+'px', zIndex:'8889',
-    width:'350px', maxHeight:'520px',
+    position:'fixed',
+    bottom: panelB+'px',
+    right:  panelR+'px',
+    zIndex:'8889',
+    width:  panelW+'px',
+    maxHeight: isMobile ? (window.innerHeight * 0.75)+'px' : '520px',
     background:'var(--bg-card)', borderRadius:'16px',
     boxShadow:'0 8px 40px rgba(0,0,0,.22)', border:'1px solid var(--border)',
     display:'flex', flexDirection:'column', overflow:'hidden'
