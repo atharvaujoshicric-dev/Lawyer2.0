@@ -104,28 +104,71 @@ html, body {
   background: #06091A;   /* deep midnight — orbs paint on top */
 }
 
-/* Fixed orb layer — sits behind everything */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  /* Three large soft orbs in complementary hues */
-  background:
-    radial-gradient(ellipse 70% 60% at 20% 20%,  #1B4FD8 0%, transparent 60%),
-    radial-gradient(ellipse 55% 50% at 85% 75%,  #0F766E 0%, transparent 55%),
-    radial-gradient(ellipse 50% 45% at 75%  5%,  #92400E 0%, transparent 50%),
-    radial-gradient(ellipse 65% 55% at 10% 85%,  #1E3A5F 0%, transparent 55%),
-    #06091A;
-  animation: orb-drift 20s ease-in-out infinite alternate;
+/* ─────────────────────────────────────────────────────────────────
+   ORB BACKGROUND — vivid colour layer the glass blurs over
+   Each orb is a separate absolutely-positioned div so they can
+   animate independently via CSS transforms.
+   ───────────────────────────────────────────────────────────────── */
+/* Orb layer wrapper */
+.lexdesk-orbs {
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none; overflow: hidden;
+  background: #06091A;
 }
-
-@keyframes orb-drift {
-  0%   { background-position: 0% 0%, 100% 100%, 90% 0%, 5% 95% ; }
-  100% { background-position: 5% 8%, 92%  88%, 85% 8%, 12% 88%; }
+/* Individual orbs */
+.lexdesk-orbs span {
+  position: absolute; border-radius: 50%;
+  filter: blur(80px); opacity: 0.75;
 }
+.lexdesk-orbs span:nth-child(1){
+  width:70vw; height:70vw; top:-20%; left:-15%;
+  background: #1B4FD8;
+  animation: orb1 18s ease-in-out infinite alternate;
+}
+.lexdesk-orbs span:nth-child(2){
+  width:60vw; height:60vw; bottom:-15%; right:-10%;
+  background: #0F766E;
+  animation: orb2 22s ease-in-out infinite alternate;
+}
+.lexdesk-orbs span:nth-child(3){
+  width:45vw; height:45vw; top:5%; right:5%;
+  background: #B45309;
+  animation: orb3 16s ease-in-out infinite alternate;
+}
+.lexdesk-orbs span:nth-child(4){
+  width:40vw; height:40vw; bottom:20%; left:15%;
+  background: #1E3A8A;
+  animation: orb1 24s ease-in-out infinite alternate-reverse;
+}
+@keyframes orb1 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(8vw,6vh) scale(1.1)} }
+@keyframes orb2 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-7vw,-5vh) scale(1.08)} }
+@keyframes orb3 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-5vw,7vh) scale(0.95)} }
 
-#app { display:flex; min-height:100vh; }
+/* Everything else sits on top of the orbs */
+#sidebar, #main, .modal-backdrop, #chatbot-btn, #chatbot-panel,
+#portal-screen, #portal-view, #login-screen, #setup-screen,
+#pending-screen { position: relative; z-index: 1; }
+#sidebar { z-index: 100; }
+#topbar  { z-index: 50; }
+.modal-backdrop { z-index: 1000; }
+#chatbot-panel  { z-index: 8889; }
+#chatbot-btn    { z-index: 8888; }
+#sidebar-overlay { z-index: 90; }
+#sidebar-toggle  { z-index: 200; }
+
+/* Remove old body::before since we're using .lexdesk-orbs divs */
+body::before { display: none; }
+
+/* Light mode orbs */
+html[data-theme="light"] .lexdesk-orbs { background: #F0F4FF; }
+html[data-theme="light"] .lexdesk-orbs span { opacity: 0.60; filter: blur(70px); }
+html[data-theme="light"] .lexdesk-orbs span:nth-child(1) { background: #60A5FA; }
+html[data-theme="light"] .lexdesk-orbs span:nth-child(2) { background: #34D399; }
+html[data-theme="light"] .lexdesk-orbs span:nth-child(3) { background: #FCD34D; }
+html[data-theme="light"] .lexdesk-orbs span:nth-child(4) { background: #F87171; }
+
+#app { display:flex; min-height:100vh; position:relative; z-index:1; }
+
 
 /* ─────────────────────────────────────────────────────────────────
    GLASS MIXIN  (applied via the .glass class or individual elements)
@@ -306,20 +349,7 @@ html[data-theme="light"] {
   --glass-border-strong:rgba(0,0,0,0.14);
 }
 
-/* Light orb background — soft pastels */
-html[data-theme="light"] body {
-  background: #F0F4FF;
-  color: var(--text-primary);
-}
-html[data-theme="light"] body::before {
-  background:
-    radial-gradient(ellipse 70% 60% at 15% 15%, rgba(96,165,250,.55)  0%, transparent 60%),
-    radial-gradient(ellipse 55% 50% at 88% 80%, rgba(52,211,153,.45)  0%, transparent 55%),
-    radial-gradient(ellipse 50% 45% at 80%  5%, rgba(251,191,36,.40)  0%, transparent 50%),
-    radial-gradient(ellipse 60% 55% at  5% 85%, rgba(248,113,113,.30) 0%, transparent 55%),
-    #F0F4FF;
-  animation: orb-drift 20s ease-in-out infinite alternate;
-}
+html[data-theme="light"] body { color: var(--text-primary); }
 
 /* Light sidebar */
 html[data-theme="light"] #sidebar {
@@ -913,9 +943,23 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
   .cal-layout{grid-template-columns:1fr}
 }
 
+
+/* ── Chat search input — light mode ── */
+html[data-theme="light"] #chat-search-input{
+  background:rgba(0,0,0,.06)!important;
+  border-color:rgba(0,0,0,.12)!important;
+  color:var(--text-primary)!important;
+}
+html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!important;}
+
 </style>
 </head>
 <body>
+
+<!-- Liquid Glass animated orb background layer -->
+<div class="lexdesk-orbs" aria-hidden="true">
+  <span></span><span></span><span></span><span></span>
+</div>
 
 <!-- ══ SETUP (first admin) ══ -->
 <div id="setup-screen">
@@ -3189,9 +3233,14 @@ let _chatTickTimer=null;
 // selectChatPeer() — defined in _js20_groups.html (group-aware version)
 
 async function loadMessages(){
+  // If a group is active, delegate to group message loader
+  if(S.activeGroupId){
+    if(typeof loadGroupMessages==='function') await loadGroupMessages(S.activeGroupId);
+    return;
+  }
   let query=sb.from('messages').select('*').order('created_at',{ascending:true}).limit(200);
   if(S.activeChatPeer===null){
-    query=query.is('recipient_id',null);
+    query=query.is('recipient_id',null).is('group_id',null);
   } else {
     query=query.or(`and(sender_id.eq.${S.user.id},recipient_id.eq.${S.activeChatPeer}),and(sender_id.eq.${S.activeChatPeer},recipient_id.eq.${S.user.id})`);
   }
@@ -3199,24 +3248,15 @@ async function loadMessages(){
   if(!error) S.messages=data||[];
   else console.error('loadMessages failed:',error);
 
-  // Load read receipts for messages I sent in this conversation,
-  // so we can show the eye icon when the other person has seen them.
+  // Load read receipts
   if(S.messages.length){
-    const myMsgIds=S.messages
-      .filter(m=>m.sender_id===S.user.id && !m.deleted)
-      .map(m=>m.id);
+    const myMsgIds=S.messages.filter(m=>m.sender_id===S.user.id&&!m.deleted).map(m=>m.id);
     if(myMsgIds.length){
       const {data:reads}=await sb.from('message_reads')
-        .select('message_id')
-        .in('message_id',myMsgIds)
-        .neq('user_id',S.user.id);   // read by someone else, not myself
+        .select('message_id').in('message_id',myMsgIds).neq('user_id',S.user.id);
       S.messageReadIds=new Set((reads||[]).map(r=>r.message_id));
-    } else {
-      S.messageReadIds=new Set();
-    }
-  } else {
-    S.messageReadIds=new Set();
-  }
+    } else { S.messageReadIds=new Set(); }
+  } else { S.messageReadIds=new Set(); }
 }
 function withinEditWindow(m){
   return (Date.now()-new Date(m.created_at).getTime())<MSG_EDIT_WINDOW_MS;
@@ -6047,25 +6087,53 @@ async function loadChatGroups(){
 function renderChatContacts(){
   const cnt=document.getElementById('chat-contact-list');
   if(!cnt)return;
-  const others=S.users.filter(u=>u.id!==S.user?.id);
 
-  // Team Channel
+  const searchEl=document.getElementById('chat-search-input');
+  const searchQ=(searchEl?.value||'').toLowerCase().trim();
+
+  const others=S.users.filter(u=>{
+    if(u.id===S.user?.id)return false;
+    if(searchQ&&!u.full_name.toLowerCase().includes(searchQ))return false;
+    return true;
+  });
+  const filteredGroups=S.chatGroups.filter(g=>
+    !searchQ||g.name.toLowerCase().includes(searchQ)
+  );
+
   const bc=S.unreadCounts['broadcast']||0;
-  let html=`<div class="chat-contact${S.activeChatPeer===null&&!S.activeGroupId?' active':''}" onclick="selectChatPeer(null)">
-    <div class="avatar-sm av-navy" style="position:relative;">
-      <i class="fas fa-users"></i>
-      <span id="chat-badge-broadcast" class="chat-unread-badge" style="display:${bc?'inline-flex':'none'}">${bc||''}</span>
+  const showTeam=!searchQ||'team channel'.includes(searchQ);
+  let html='';
+
+  // Search bar
+  html+=`<div style="padding:10px 12px 6px;">
+    <div style="position:relative;">
+      <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);pointer-events:none;"></i>
+      <input type="text" id="chat-search-input" placeholder="Search conversations…"
+        value="${escHtml(searchQ)}"
+        oninput="renderChatContacts()"
+        style="width:100%;padding:7px 10px 7px 30px;border-radius:8px;font-size:12.5px;
+               background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+               color:var(--text-primary);outline:none;"/>
     </div>
-    <div class="chat-contact-name">Team Channel</div>
   </div>`;
 
-  // Groups
-  if(S.chatGroups.length){
-    html+=`<div style="padding:6px 14px 2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.3);">Groups</div>`;
-    html+=S.chatGroups.map(g=>{
+  if(showTeam){
+    html+=`<div class="chat-contact${S.activeChatPeer===null&&!S.activeGroupId?' active':''}" onclick="selectChatPeer(null)">
+      <div class="avatar-sm av-navy" style="position:relative;">
+        <i class="fas fa-users"></i>
+        <span id="chat-badge-broadcast" class="chat-unread-badge" style="display:${bc?'inline-flex':'none'}">${bc||''}</span>
+      </div>
+      <div class="chat-contact-name">Team Channel</div>
+    </div>`;
+  }
+
+  if(filteredGroups.length){
+    html+=`<div class="chat-section-label">Groups</div>`;
+    html+=filteredGroups.map(g=>{
       const isActive=S.activeGroupId===g.id;
       const unread=S.unreadCounts[`group_${g.id}`]||0;
       const myRole=g.members.find(m=>m.user_id===S.user.id);
+      const isAdmin=myRole?.is_admin;
       return `<div class="chat-contact${isActive?' active':''}" onclick="selectChatGroup('${g.id}')">
         <div class="avatar-sm av-purple" style="position:relative;">
           <i class="fas fa-layer-group" style="font-size:11px;"></i>
@@ -6073,17 +6141,23 @@ function renderChatContacts(){
         </div>
         <div style="flex:1;min-width:0;">
           <div class="chat-contact-name">${escHtml(g.name)}</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.35);">${g.members.length} member${g.members.length!==1?'s':''}${myRole?.is_admin?' · Admin':''}</div>
+          <div style="font-size:10px;color:var(--text-muted);">${g.members.length} member${g.members.length!==1?'s':''}${isAdmin?' · Admin':''}</div>
         </div>
-        ${myRole?.is_admin?`<i class="fas fa-cog" style="font-size:11px;color:rgba(255,255,255,.35);margin-right:4px;" onclick="event.stopPropagation();openGroupSettings('${g.id}')"></i>`:''}
+        ${isAdmin?`<button onclick="event.stopPropagation();openGroupSettings('${g.id}')"
+          style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;
+                 width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+                 cursor:pointer;flex-shrink:0;color:var(--text-secondary);font-size:12px;
+                 transition:all .15s;" title="Group settings">
+          <i class="fas fa-cog"></i></button>`:''}
       </div>`;
     }).join('');
   }
 
-  // Direct Messages
-  html+=`<div style="padding:6px 14px 2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.3);">Direct Messages</div>`;
-  if(!others.length){
-    html+=`<div style="padding:14px;font-size:12px;color:var(--text-muted);">No other team members yet.</div>`;
+  if(others.length||!searchQ){
+    html+=`<div class="chat-section-label">Direct Messages</div>`;
+  }
+  if(!others.length&&!searchQ){
+    html+=`<div style="padding:10px 14px;font-size:12px;color:var(--text-muted);">No other team members yet.</div>`;
   }
   html+=others.map(u=>{
     const count=S.unreadCounts[u.id]||0;
@@ -6093,43 +6167,25 @@ function renderChatContacts(){
         ${initials(u.full_name)}
         <span id="chat-badge-${u.id}" class="chat-unread-badge" style="display:${count?'inline-flex':'none'}">${count||''}</span>
       </div>
-      <div class="chat-contact-name">${u.full_name}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="chat-contact-name">${escHtml(u.full_name)}</div>
+        <div style="font-size:10px;color:var(--text-muted);">${u.role==='admin'?'Admin':'Member'}</div>
+      </div>
     </div>`;
   }).join('');
 
-  // New Group button
-  html+=`<div style="padding:10px 14px;">
-    <button class="btn btn-outline btn-sm w-full" style="justify-content:center;color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15);" onclick="openCreateGroupModal()">
-      <i class="fas fa-plus"></i> New Group
+  html+=`<div style="padding:8px 12px 12px;">
+    <button class="btn btn-outline btn-sm w-full" style="justify-content:center;font-size:12px;" onclick="openCreateGroupModal()">
+      <i class="fas fa-plus" style="margin-right:6px;"></i>New Group
     </button>
   </div>`;
 
   cnt.innerHTML=html;
+  if(searchQ){
+    const inp=cnt.querySelector('#chat-search-input');
+    if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
+  }
 }
-
-// ── Select a group ────────────────────────────────────────────────────────
-async function selectChatGroup(groupId){
-  S.activeGroupId=groupId;
-  S.activeChatPeer=null;
-  S.editingMessageId=null;
-  resetChatSendButton();
-  document.getElementById('chat-text-input').value='';
-  renderChatContacts();
-  const g=S.chatGroups.find(x=>x.id===groupId);
-  document.getElementById('chat-header-title').textContent=g?escHtml(g.name):'Group';
-  await loadGroupMessages(groupId);
-  renderChatMessages();
-  markGroupRead(groupId);
-}
-
-async function loadGroupMessages(groupId){
-  const {data,error}=await sb.from('messages')
-    .select('*').eq('group_id',groupId)
-    .order('created_at',{ascending:true}).limit(200);
-  if(!error) S.messages=data||[];
-  S.messageReadIds=new Set(); // no read receipts for groups
-}
-
 function markGroupRead(groupId){
   const key=`group_${groupId}`;
   S.unreadCounts[key]=0;
@@ -6187,26 +6243,7 @@ window.sendChatMessage=async function(){
   renderChatMessages();
 };
 
-async function sendGroupMessage(){
-  const input=document.getElementById('chat-text-input');
-  const body=(input.value||'').trim();
-  if(!body&&!S.pendingChatFile)return;
-  const payload={sender_id:S.user.id,group_id:S.activeGroupId,body:body||null};
-  if(S.pendingChatFile){
-    const f=S.pendingChatFile;
-    const path=`chat/${Date.now()}_${f.name}`;
-    const {error:upErr}=await sb.storage.from('lexdesk-files').upload(path,f,{contentType:f.type});
-    if(upErr){showToast('Attachment upload failed: '+upErr.message,'error');return;}
-    payload.attachment_path=path;
-    payload.attachment_name=f.name;
-  }
-  const {error}=await sb.from('messages').insert(payload);
-  if(error){showToast('Send failed: '+error.message,'error');return;}
-  input.value='';
-  clearChatPendingFile();
-  await loadGroupMessages(S.activeGroupId);
-  renderChatMessages();
-}
+
 
 // ── Create group modal ────────────────────────────────────────────────────
 function openCreateGroupModal(){
@@ -6272,16 +6309,7 @@ function openGroupSettings(groupId){
   openModal('modal-group-settings');
 }
 
-async function saveGroupName(){
-  const name=(document.getElementById('gs-name').value||'').trim();
-  if(!name)return;
-  const {error}=await sb.from('chat_groups').update({name}).eq('id',S._managingGroupId);
-  if(error){showToast('Failed: '+error.message,'error');return;}
-  await loadChatGroups(); renderChatContacts();
-  const g=S.chatGroups.find(x=>x.id===S._managingGroupId);
-  if(g) document.getElementById('chat-header-title').textContent=g.name;
-  showToast('Group renamed.','success');
-}
+
 
 async function addGroupMember(){
   const uid=document.getElementById('gs-add-member').value;
@@ -6300,6 +6328,139 @@ async function removeGroupMember(groupId,userId){
   openGroupSettings(groupId);
   showToast('Member removed.','warning');
 }
+
+function selectChatGroup(groupId){
+  S.activeChatPeer   = null;
+  S.activeGroupId    = groupId;   // used by loadMessages() and fast poll
+  S.activeChatGroup  = groupId;   // legacy alias
+  S.editingMessageId = null;
+  resetChatSendButton();
+  document.getElementById('chat-text-input').value='';
+  renderChatContacts();
+  const grp=S.chatGroups.find(g=>g.id===groupId);
+  const headerEl=document.getElementById('chat-header-title');
+  if(headerEl) headerEl.textContent=grp?grp.name:'Group';
+  const manageBtn=document.getElementById('chat-manage-group-btn');
+  if(manageBtn) manageBtn.style.display='inline-flex';
+  loadGroupMessages(groupId).then(renderChatMessages);
+}
+
+async function loadGroupMessages(groupId){
+  const {data,error}=await sb.from('messages')
+    .select('*').eq('group_id',groupId)
+    .eq('deleted',false)
+    .order('created_at',{ascending:true}).limit(200);
+  if(!error) S.messages=data||[];
+  // Load read receipts for my sent messages
+  const myMsgIds=(S.messages||[]).filter(m=>m.sender_id===S.user.id).map(m=>m.id);
+  if(myMsgIds.length){
+    const {data:reads}=await sb.from('message_reads').select('message_id')
+      .in('message_id',myMsgIds).neq('user_id',S.user.id);
+    S.messageReadIds=new Set((reads||[]).map(r=>r.message_id));
+  } else { S.messageReadIds=new Set(); }
+}
+
+async function sendGroupMessage(){
+  const groupId=S.activeChatGroup;
+  if(!groupId) return;
+  const input=document.getElementById('chat-text-input');
+  const body=(input.value||'').trim();
+  if(!body&&!S.pendingChatFile) return;
+  const payload={sender_id:S.user.id,group_id:groupId,recipient_id:null,body:body||null};
+  if(S.pendingChatFile){
+    const f=S.pendingChatFile;
+    const path=`chat/${Date.now()}_${f.name}`;
+    const {error:upErr}=await sb.storage.from('lexdesk-files').upload(path,f,{contentType:f.type});
+    if(upErr){showToast('Upload failed: '+upErr.message,'error');return;}
+    payload.attachment_path=path; payload.attachment_name=f.name;
+  }
+  const {error}=await sb.from('messages').insert(payload);
+  if(error){showToast('Send failed: '+error.message,'error');return;}
+  input.value=''; clearChatPendingFile();
+  await loadGroupMessages(groupId); renderChatMessages();
+}
+
+// ── Group management modal ────────────────────────────────────────────────
+async function openManageGroupModal(){
+  const groupId=S.activeChatGroup;
+  if(!groupId) return;
+  const grp=S.chatGroups.find(g=>g.id===groupId);
+  if(!grp) return;
+  document.getElementById('manage-grp-name').value=grp.name;
+  const members=await loadGroupMembers(groupId);
+  const iAmAdmin=members.some(m=>m.user_id===S.user.id&&m.is_admin);
+  document.getElementById('manage-grp-admin-controls').style.display=iAmAdmin?'block':'none';
+
+  const list=document.getElementById('manage-grp-members');
+  list.innerHTML=members.map(m=>{
+    const u=m.profiles||S.users.find(x=>x.id===m.user_id);
+    const name=u?.full_name||m.user_id;
+    const isMe=m.user_id===S.user.id;
+    const isSeniorAdv=u?.role==='admin';
+    return `<div class="user-list-item" style="padding:8px 12px;">
+      <div class="avatar-sm ${m.is_admin?'av-purple':'av-blue'}">${initials(name)}</div>
+      <div class="user-list-item-info">
+        <div class="user-list-item-name">${escHtml(name)} ${m.is_admin?'<span class="badge badge-admin" style="font-size:10px;">Admin</span>':''}</div>
+      </div>
+      ${iAmAdmin&&!isMe&&!isSeniorAdv
+        ?`<button class="btn btn-danger btn-xs" onclick="removeFromGroup('${groupId}','${m.user_id}')">Remove</button>`:''}
+    </div>`;
+  }).join('');
+
+  // Populate add-member dropdown (users not already in group)
+  const memberIds=new Set(members.map(m=>m.user_id));
+  const addSel=document.getElementById('manage-grp-add-user');
+  const eligible=S.users.filter(u=>!memberIds.has(u.id));
+  addSel.innerHTML=eligible.length
+    ?eligible.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')
+    :'<option value="">All users already in group</option>';
+  addSel.disabled=!eligible.length;
+
+  openModal('modal-manage-group');
+}
+
+async function saveGroupName(){
+  const groupId=S.activeChatGroup;
+  const name=(document.getElementById('manage-grp-name')?.value||'').trim();
+  if(!name||!groupId) return;
+  const {error}=await sb.from('chat_groups').update({name}).eq('id',groupId);
+  if(error){showToast('Failed: '+error.message,'error');return;}
+  await loadChatGroups(); renderChatContacts();
+  document.getElementById('chat-header-title').textContent=name;
+  showToast('Group name updated.','success');
+}
+
+async function addToGroup(){
+  const groupId=S.activeChatGroup;
+  const uid=document.getElementById('manage-grp-add-user')?.value;
+  if(!groupId||!uid) return;
+  const {error}=await sb.from('chat_group_members').insert({group_id:groupId,user_id:uid,is_admin:false});
+  if(error){showToast('Failed: '+error.message,'error');return;}
+  await openManageGroupModal();
+  showToast('Member added.','success');
+}
+
+async function removeFromGroup(groupId,uid){
+  if(!confirm('Remove this member from the group?')) return;
+  await sb.from('chat_group_members').delete().eq('group_id',groupId).eq('user_id',uid);
+  await openManageGroupModal();
+  showToast('Member removed.','warning');
+}
+
+async function leaveGroup(){
+  const groupId=S.activeChatGroup;
+  if(!groupId||!confirm('Leave this group?')) return;
+  await sb.from('chat_group_members').delete().eq('group_id',groupId).eq('user_id',S.user.id);
+  S.activeChatGroup=null;
+  await loadChatGroups(); renderChatContacts();
+  closeModal('modal-manage-group');
+  // Switch to team channel
+  selectChatPeer(null);
+  showToast('You left the group.','warning');
+}
+
+// ── Build create group modal member list ─────────────────────────────────
+
 </script>
 <script>
 // ════════════════════════════════════════════
@@ -6427,32 +6588,6 @@ function toggleChatbotSetting(btn){
 // ── Group modal helpers ───────────────────────────────────────────────────
 // These are thin wrappers — the real logic is in _js20_groups.html.
 // The modal HTML calls createGroup() which is defined in _js20_groups.html.
-
-async function addToGroup(){
-  const sel=document.getElementById('manage-grp-add-user');
-  const uid=sel?.value;
-  if(!uid||!S._managingGroupId)return;
-  const {error}=await sb.from('group_members')
-    .insert({group_id:S._managingGroupId,user_id:uid,is_admin:false});
-  if(error){showToast('Failed: '+error.message,'error');return;}
-  await loadChatGroups();
-  renderChatContacts();
-  openGroupSettings(S._managingGroupId);
-  showToast('Member added.','success');
-}
-
-async function leaveGroup(){
-  if(!S._managingGroupId)return;
-  if(!confirm('Leave this group?'))return;
-  const {error}=await sb.from('group_members')
-    .delete().eq('group_id',S._managingGroupId).eq('user_id',S.user.id);
-  if(error){showToast('Failed: '+error.message,'error');return;}
-  closeModal('modal-group-settings');
-  S.activeGroupId=null; S.activeChatPeer=null;
-  await loadChatGroups();
-  renderChatContacts();
-  showToast('You left the group.','info');
-}
 
 async function deleteGroup(){
   const groupId=S._managingGroupId;
