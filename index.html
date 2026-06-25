@@ -5939,7 +5939,7 @@ function applyFinancesVisibility(){
     el.style.display = (isAdmin()||canViewFinances()) ? '' : 'none';
   });
 }
-</script>
+
 
 // ── UI aliases for HTML onclick handlers ──────────────────────────────────
 // These thin wrappers bridge HTML onclicks to the underlying functions.
@@ -6028,6 +6028,8 @@ async function deleteGroup(){
   renderChatContacts();
   showToast('Group deleted.','warning');
 }
+</script>
+  
 <script>
 // ════════════════════════════════════════════
 //  LEXDESK ASSISTANT — conversational chat UI
