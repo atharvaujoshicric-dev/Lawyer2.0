@@ -357,16 +357,25 @@ create table if not exists chat_groups (
   created_at timestamptz default now()
 );
 alter table chat_groups enable row level security;
+-- Security definer functions to break group RLS circular dependencies
+create or replace function user_in_group(p_group_id uuid, p_user_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists(select 1 from group_members where group_id=p_group_id and user_id=p_user_id);
+$$;
+
+create or replace function user_is_group_admin(p_group_id uuid, p_user_id uuid)
+returns boolean language sql security definer stable as $$
+  select exists(select 1 from group_members where group_id=p_group_id and user_id=p_user_id and is_admin=true);
+$$;
+
 drop policy if exists "cgroups_select" on chat_groups;
 create policy "cgroups_select" on chat_groups for select
-  using (exists(select 1 from group_members gm
-    where gm.group_id=chat_groups.id and gm.user_id=auth.uid()));
+  using (user_in_group(id, auth.uid()));
 drop policy if exists "cgroups_insert" on chat_groups;
 create policy "cgroups_insert" on chat_groups for insert with check (is_approved());
 drop policy if exists "cgroups_update" on chat_groups;
 create policy "cgroups_update" on chat_groups for update
-  using (exists(select 1 from group_members gm
-    where gm.group_id=chat_groups.id and gm.user_id=auth.uid() and gm.is_admin=true));
+  using (user_is_group_admin(id, auth.uid()));
 
 create table if not exists group_members (
   group_id uuid references chat_groups(id) on delete cascade,
@@ -376,18 +385,15 @@ create table if not exists group_members (
   primary key (group_id, user_id)
 );
 alter table group_members enable row level security;
+-- gmembers_select: only check own row OR use the security definer fn to avoid recursion
 drop policy if exists "gmembers_select" on group_members;
 create policy "gmembers_select" on group_members for select
-  using (user_id=auth.uid() or exists(
-    select 1 from group_members gm2
-    where gm2.group_id=group_members.group_id and gm2.user_id=auth.uid()));
+  using (user_id=auth.uid() or user_in_group(group_id, auth.uid()));
 drop policy if exists "gmembers_insert" on group_members;
 create policy "gmembers_insert" on group_members for insert with check (is_approved());
 drop policy if exists "gmembers_delete" on group_members;
 create policy "gmembers_delete" on group_members for delete
-  using (user_id=auth.uid() or exists(
-    select 1 from group_members gm
-    where gm.group_id=group_members.group_id and gm.user_id=auth.uid() and gm.is_admin=true));
+  using (user_id=auth.uid() or user_is_group_admin(group_id, auth.uid()));
 drop policy if exists "gmembers_update" on group_members;
 create policy "gmembers_update" on group_members for update using (is_admin());
 
@@ -434,6 +440,7 @@ select routine_name from information_schema.routines
 where routine_schema='public'
   and routine_name in (
     'is_admin','is_approved',
-    'user_has_note_share','user_has_note_editor_share','user_owns_note'
+    'user_has_note_share','user_has_note_editor_share','user_owns_note',
+    'user_in_group','user_is_group_admin'
   )
 order by routine_name;
