@@ -439,3 +439,6 @@ where routine_schema='public'
     'user_owns_note','user_in_group','user_is_group_admin'
   )
 order by routine_name;
+
+-- ── Per-user theme config (jsonb: mode, accent, background, contrast) ──
+alter table profiles add column if not exists theme_config jsonb default '{"mode":"dark","accent":"gold","background":"midnight","contrast":"standard"}'::jsonb;
