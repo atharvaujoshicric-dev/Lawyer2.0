@@ -2126,6 +2126,8 @@ async function afterAuth(){
 async function doLogout(){
   if(S.profile && !confirm('Sign out?'))return;
   await sb.auth.signOut();
+  // Clear saved-state markers so the next user isn't affected
+  localStorage.removeItem('ld_theme_saved');
   S={...S, user:null, profile:null,
      unreadCounts:{}, locallyReadIds:new Set(), messageReadIds:new Set(),
      messages:[], lastSeenTaskTs:''};
@@ -7314,13 +7316,15 @@ function getThemeConfig(){
     const s=localStorage.getItem('ld_theme_config');
     if(s){ const p=JSON.parse(s); if(p&&p.mode) return p; }
   }catch(e){}
-  return {mode:'dark', backdrop:'midnight', tint:'neutral', contrast:'standard'};
+  // NEW DEFAULTS: Dark Glass, Charcoal, Frosted Glass, High contrast
+  return {mode:'dark', backdrop:'charcoal', tint:'frost', contrast:'high'};
 }
 function saveThemeConfig(cfg, toDB=false){
   localStorage.setItem('ld_theme_config', JSON.stringify(cfg));
   if(toDB && typeof S!=='undefined' && S?.user?.id && typeof sb!=='undefined'){
-    sb.from('profiles').update({theme_config:cfg}).eq('id',S.user.id);
+    return sb.from('profiles').update({theme_config:cfg}).eq('id',S.user.id);
   }
+  return Promise.resolve();
 }
 
 // ── Core apply ────────────────────────────────────────
@@ -7385,10 +7389,17 @@ function initTheme(){
 // ── After login: use profile preference ──────────────
 function applyProfileTheme(profile){
   if(profile?.theme_config && profile.theme_config.mode){
-    saveThemeConfig(profile.theme_config, false);
-    applyThemeConfig(profile.theme_config);
+    const cfg = profile.theme_config;
+    // Write to localStorage so it persists on next refresh
+    localStorage.setItem('ld_theme_config', JSON.stringify(cfg));
+    // Mark as "saved" so the unsaved-changes warning doesn't appear after login
+    localStorage.setItem('ld_theme_saved', JSON.stringify(cfg));
+    applyThemeConfig(cfg);
   } else {
-    applyThemeConfig(getThemeConfig());
+    // No profile theme — apply stored local config
+    const cfg = getThemeConfig();
+    localStorage.setItem('ld_theme_saved', JSON.stringify(cfg));
+    applyThemeConfig(cfg);
   }
 }
 
@@ -7416,13 +7427,17 @@ function renderThemeCustomiser(){
   const cfg=getThemeConfig();
   const {mode,backdrop,tint,contrast}=cfg;
 
-  // Shared button style helper
+  // Check if there are unsaved changes (localStorage vs what's in DB / last saved)
+  const savedStr = localStorage.getItem('ld_theme_saved');
+  const currentStr = JSON.stringify(cfg);
+  const hasUnsaved = savedStr && savedStr !== currentStr;
+
   const sel=(active)=>active
     ? 'border:2px solid var(--gold);background:var(--gold-dim);color:var(--gold);'
     : 'border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text-secondary);';
 
   cnt.innerHTML=`
-  <div style="display:flex;flex-direction:column;gap:22px;">
+  <div style="display:flex;flex-direction:column;gap:20px;">
 
     <!-- Mode -->
     <div>
@@ -7448,8 +7463,7 @@ function renderThemeCustomiser(){
         ${THEME_BACKDROPS.map(b=>`
           <button onclick="themeSet('backdrop','${b.id}')"
             style="${sel(backdrop===b.id)}border-radius:12px;padding:10px 8px;cursor:pointer;
-              font-size:12.5px;font-weight:500;transition:all .18s;display:flex;align-items:center;
-              gap:7px;">
+              font-size:12.5px;font-weight:500;transition:all .18s;display:flex;align-items:center;gap:7px;">
             <span style="width:13px;height:13px;border-radius:50%;flex-shrink:0;
               background:${mode==='light'?b.light:b.dark};
               border:1px solid rgba(255,255,255,.25);"></span>
@@ -7490,26 +7504,44 @@ function renderThemeCustomiser(){
       </div>
     </div>
 
-    <!-- Reset -->
-    <button onclick="themeReset()"
-      style="padding:9px;border-radius:10px;background:rgba(255,255,255,.04);
-        border:1px solid rgba(255,255,255,.10);color:var(--text-muted);font-size:12.5px;
-        cursor:pointer;transition:all .15s;width:100%;"
-      onmouseover="this.style.color='var(--danger)';this.style.borderColor='rgba(248,113,113,.30)'"
-      onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='rgba(255,255,255,.10)'">
-      <i class="fas fa-undo" style="margin-right:6px;"></i>Reset to Default
-    </button>
+    <!-- Save + Reset row -->
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button id="theme-save-btn" onclick="themeSave()"
+        style="flex:1;padding:11px;border-radius:12px;cursor:pointer;font-size:13.5px;
+          font-weight:600;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px;
+          background:linear-gradient(135deg,var(--gold),#b8872a);border:none;color:#0d0d0d;
+          box-shadow:0 4px 16px rgba(212,168,67,.30);">
+        <i class="fas fa-save"></i> Save Theme
+      </button>
+      <button onclick="themeReset()"
+        style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.05);
+          border:1px solid rgba(255,255,255,.10);color:var(--text-muted);font-size:12.5px;
+          cursor:pointer;transition:all .15s;white-space:nowrap;"
+        onmouseover="this.style.color='var(--danger)';this.style.borderColor='rgba(248,113,113,.28)'"
+        onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='rgba(255,255,255,.10)'">
+        <i class="fas fa-undo"></i> Reset
+      </button>
+    </div>
+
+    ${hasUnsaved ? `
+    <div style="font-size:11.5px;color:var(--warning);display:flex;align-items:center;gap:6px;margin-top:-10px;">
+      <i class="fas fa-exclamation-circle"></i>
+      You have unsaved changes. Click <strong>Save Theme</strong> to apply on next login.
+    </div>` : `
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:-10px;">
+      Theme applied instantly · Click Save to persist across logins
+    </div>`}
 
   </div>`;
 }
 
-// ── Single-call setter ────────────────────────────────
+// ── Single-call setter (applies instantly, marks as unsaved) ─────────────
 function themeSet(key, val){
   const cfg=getThemeConfig();
   cfg[key]=val;
-  saveThemeConfig(cfg,true);
+  // Save to localStorage immediately (instant apply)
+  localStorage.setItem('ld_theme_config', JSON.stringify(cfg));
   applyThemeConfig(cfg);
-  // Sync mode toggle in settings header
   if(key==='mode'){
     const btn=document.getElementById('theme-toggle');
     if(btn) btn.classList.toggle('on', val==='dark');
@@ -7517,11 +7549,31 @@ function themeSet(key, val){
   renderThemeCustomiser();
 }
 
+// ── Explicit save to DB + mark as saved ─────────────────────────────────
+async function themeSave(){
+  const cfg=getThemeConfig();
+  const btn=document.getElementById('theme-save-btn');
+  if(btn){ btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving…'; btn.disabled=true; }
+  try{
+    await saveThemeConfig(cfg, true);  // writes to DB
+    // Mark as saved so unsaved-changes warning clears
+    localStorage.setItem('ld_theme_saved', JSON.stringify(cfg));
+    showToast('Theme saved! It will apply on every login.','success');
+    renderThemeCustomiser();
+  } catch(e){
+    showToast('Save failed — theme is applied locally only.','error');
+    if(btn){ btn.innerHTML='<i class="fas fa-save"></i> Save Theme'; btn.disabled=false; }
+  }
+}
+
 function themeReset(){
-  const def={mode:'dark',backdrop:'midnight',tint:'neutral',contrast:'standard'};
-  saveThemeConfig(def,true); applyThemeConfig(def);
+  const def={mode:'dark', backdrop:'charcoal', tint:'frost', contrast:'high'};
+  localStorage.setItem('ld_theme_config', JSON.stringify(def));
+  localStorage.setItem('ld_theme_saved',  JSON.stringify(def));
+  saveThemeConfig(def, true);
+  applyThemeConfig(def);
   const btn=document.getElementById('theme-toggle');
-  if(btn) btn.classList.toggle('on',true);
+  if(btn) btn.classList.toggle('on', true);
   renderThemeCustomiser();
   showToast('Theme reset to default.','info');
 }
