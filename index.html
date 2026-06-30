@@ -10,9 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <style>
-
 /*
   ╔══════════════════════════════════════════════════════════════════╗
   ║  LEXDESK  —  True Apple-Style Liquid Glass                       ║
@@ -960,7 +958,6 @@ html[data-theme="light"] #chat-search-input{
 }
 html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!important;}
 
-
 </style>
 </head>
 <body>
@@ -970,31 +967,27 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
   <span></span><span></span><span></span><span></span>
 </div>
 
-
-<!-- ════════════════════════════════════════════════════════════════════
-     CONFIGURATION ERROR SCREEN
-     Shown only if the build was deployed without SUPABASE_URL /
-     SUPABASE_ANON_KEY baked into env.js — see build/build.js and
-     docs/SETUP.md. In a correctly deployed SaaS instance, end users
-     never see this; it exists purely so a broken deploy fails loudly
-     and obviously instead of silently breaking every API call.
-     ════════════════════════════════════════════════════════════════════ -->
-<div id="config-error-screen" style="display:none;position:fixed;inset:0;z-index:999;align-items:center;justify-content:center;padding:16px;background:var(--bg,#0a0e1a);">
+<!-- ══ SETUP (first admin) ══ -->
+<div id="setup-screen">
   <div class="setup-card">
     <div class="setup-logo">Lex<span>Desk</span></div>
-    <p style="font-size:13px;color:var(--danger);margin-bottom:12px;">
-      <i class="fas fa-exclamation-triangle"></i> Configuration error
-    </p>
-    <p style="font-size:13px;color:var(--text-muted);line-height:1.6;">
-      This deployment is missing its Supabase connection details
-      (<code>SUPABASE_URL</code> / <code>SUPABASE_ANON_KEY</code>).
-      This is a build-time configuration issue, not something an end
-      user can fix — please contact your administrator or see
-      <code>docs/SETUP.md</code> in the LexDesk repository.
-    </p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Secure Legal Practice Management — connect your database</p>
+    <div id="setup-config-step">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Supabase Project URL</label>
+        <input class="form-control" id="cfg-url" type="text" placeholder="https://xxxx.supabase.co"/>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Supabase Anon Key</label>
+        <input class="form-control" id="cfg-key" type="text" placeholder="eyJhbGciOi..."/>
+      </div>
+      <button class="btn btn-primary w-full" style="justify-content:center;" onclick="saveSupabaseConfig()">Connect <i class="fas fa-arrow-right"></i></button>
+      <p class="form-hint mt-2">Run <code>supabase_schema.sql</code> in your Supabase SQL Editor first (one-time setup).</p>
+    </div>
   </div>
 </div>
 
+<!-- ══ LOGIN / SIGNUP ══ -->
 <div id="login-screen" style="display:none;">
   <div class="login-card">
     <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--navy);margin-bottom:4px;">Lex<span style="color:var(--gold);">Desk</span></div>
@@ -1016,47 +1009,12 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
     </div>
 
     <div id="auth-signup" style="display:none;">
-      <!-- Mode selector: starting a brand-new firm vs joining one that
-           already exists on LexDesk via an invite code from its admin -->
-      <input type="hidden" id="su-mode-selected" value="new"/>
-      <div style="display:flex;gap:6px;margin-bottom:14px;">
-        <button type="button" class="su-mode-btn active" data-mode="new" onclick="toggleSignupMode('new')"
-          style="flex:1;padding:9px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;
-                 border:1.5px solid var(--gold);background:var(--gold-dim);color:var(--gold);">
-          <i class="fas fa-building"></i> Start a new firm
-        </button>
-        <button type="button" class="su-mode-btn" data-mode="invite" onclick="toggleSignupMode('invite')"
-          style="flex:1;padding:9px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;
-                 border:1.5px solid var(--border);background:var(--glass);color:var(--text-secondary);">
-          <i class="fas fa-user-friends"></i> Join with invite code
-        </button>
-      </div>
-
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">First person to sign up becomes Admin automatically. Everyone after needs a signup code from the admin and approval before they can log in.</p>
       <div class="form-grid" style="gap:13px;">
         <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input class="form-control" id="su-name" type="text"/></div>
         <div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input class="form-control" id="su-email" type="email"/></div>
         <div class="form-group"><label class="form-label">Password <span class="required">*</span></label><input class="form-control" id="su-pwd" type="password" placeholder="Min. 8 characters"/></div>
-
-        <div id="su-newfirm-fields">
-          <div class="form-group"><label class="form-label">Firm / Chamber Name <span class="required">*</span></label><input class="form-control" id="su-firm-name" type="text" placeholder="e.g. Sharma & Associates"/></div>
-          <div class="form-group"><label class="form-label">Bar Council State</label>
-            <select class="form-control" id="su-bar-state">
-              <option value="">— Select (optional) —</option>
-              <option>Andhra Pradesh</option><option>Bihar</option><option>Delhi</option>
-              <option>Gujarat</option><option>Karnataka</option><option>Kerala</option>
-              <option>Madhya Pradesh</option><option>Maharashtra & Goa</option>
-              <option>Punjab & Haryana</option><option>Rajasthan</option>
-              <option>Tamil Nadu</option><option>Telangana</option>
-              <option>Uttar Pradesh</option><option>West Bengal</option><option>Other</option>
-            </select>
-          </div>
-          <p class="form-hint">You'll be the admin of this firm and get a 14-day free trial automatically.</p>
-        </div>
-
-        <div id="su-invite-fields" style="display:none;">
-          <div class="form-group"><label class="form-label">Invite Code <span class="required">*</span></label><input class="form-control" id="su-invite-code" type="text" placeholder="Ask your firm admin for this code"/></div>
-          <p class="form-hint">Your account will need approval from your firm's admin before you can log in.</p>
-        </div>
+        <div class="form-group" id="su-code-wrap"><label class="form-label">Signup Code</label><input class="form-control" id="su-code" type="text" placeholder="Ask admin for this code"/></div>
       </div>
       <p id="su-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
       <button class="btn btn-gold w-full mt-4" style="justify-content:center;font-size:15px;padding:12px;" onclick="doSignUp()"><i class="fas fa-user-plus"></i> Create Account</button>
@@ -1064,6 +1022,7 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
   </div>
 </div>
 
+<!-- ══ PENDING APPROVAL SCREEN ══ -->
 <div id="pending-screen" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:997;align-items:center;justify-content:center;padding:20px;">
   <div class="login-card" style="text-align:center;">
     <div style="width:60px;height:60px;border-radius:50%;background:var(--warning-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#d69e2e;"><i class="fas fa-clock"></i></div>
@@ -1071,8 +1030,9 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Your account has been created. The admin needs to approve and assign your role before you can sign in.</p>
     <button class="btn btn-outline w-full" style="justify-content:center;" onclick="doLogout()">Back to Sign In</button>
   </div>
-</div
+</div>
 
+<!-- ══ CLIENT PORTAL LOGIN ══ -->
 <div id="portal-screen" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:998;align-items:center;justify-content:center;padding:16px;">
   <div class="login-card">
     <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--navy);margin-bottom:4px;">Lex<span style="color:var(--gold);">Desk</span></div>
@@ -1084,11 +1044,12 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
     <p id="portal-err" style="color:var(--danger);font-size:12px;margin-bottom:10px;display:none;"></p>
     <button class="btn btn-gold w-full" style="justify-content:center;font-size:15px;padding:12px;" onclick="portalLogin()"><i class="fas fa-unlock"></i> View My Case</button>
   </div>
-</div
+</div>
 
-<div id="portal-view" style="display:none;min-height:100vh;background:var(--bg);overflow-y:auto;"></div
+<!-- ══ CLIENT PORTAL VIEW ══ -->
+<div id="portal-view" style="display:none;min-height:100vh;background:var(--bg);overflow-y:auto;"></div>
 
-
+<!-- ══ MAIN APP ══ -->
 <div id="app" style="display:none;">
   <button id="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
   <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -1121,6 +1082,7 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
     </header>
     <div id="page">
 
+      <!-- DASHBOARD -->
       <div class="page-view active" id="view-dashboard">
         <div class="stats-grid" id="stats-grid"></div>
         <div class="dash-grid">
@@ -1141,9 +1103,12 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
             </div>
           </div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-clients">
+
+
+      <!-- CLIENTS -->
+      <div class="page-view" id="view-clients">
         <div class="search-bar">
           <div class="search-input-wrap"><i class="fas fa-search"></i><input class="search-input" id="client-search" type="text" placeholder="Search by name, ID…" oninput="renderClientTable()"/></div>
           <select class="form-control" id="filter-type" style="width:auto;" onchange="renderClientTable()"><option value="">All Types</option></select>
@@ -1155,18 +1120,19 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           <div class="table-wrap"><table class="data-table"><thead><tr><th>Client</th><th>Case Type</th><th>Assigned To</th><th>Status</th><th>Next Deadline</th><th>Actions</th></tr></thead><tbody id="clients-tbody"></tbody></table></div>
           <div id="clients-empty" class="empty-state" style="display:none;"><i class="fas fa-users"></i><div class="empty-state-title">No clients found</div></div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-deadlines">
+      <!-- DEADLINES -->
+      <div class="page-view" id="view-deadlines">
         <div class="stats-grid" style="margin-bottom:24px;">
           <div class="stat-card red"><div class="stat-label">Overdue</div><div class="stat-value" id="dl-overdue">0</div><i class="fas fa-exclamation-circle stat-icon"></i></div>
           <div class="stat-card gold"><div class="stat-label">Within 30 Days</div><div class="stat-value" id="dl-30">0</div><i class="fas fa-clock stat-icon"></i></div>
           <div class="stat-card blue"><div class="stat-label">Within 60 Days</div><div class="stat-value" id="dl-60">0</div><i class="fas fa-calendar-alt stat-icon"></i></div>
         </div>
         <div id="deadlines-list"></div>
-      </div
-
-<div class="page-view" id="view-planner">
+      </div>
+      <!-- DAILY PLANNER (monthly grid + day detail panel) -->
+      <div class="page-view" id="view-planner">
         <div class="cal-layout">
           <!-- Left: monthly calendar -->
           <div class="cal-grid-wrap">
@@ -1208,24 +1174,27 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
             </div>
           </div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-notes">
+      <!-- NOTES -->
+      <div class="page-view" id="view-notes">
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
           <button class="btn btn-gold" onclick="openNoteEditor()"><i class="fas fa-plus"></i> New Note</button>
         </div>
         <div id="notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
         <div id="notes-empty" class="empty-state" style="display:none;"><i class="fas fa-sticky-note"></i><div class="empty-state-title">No notes yet</div><div class="empty-state-desc">Create private notes and share them with your team</div></div>
-      </div
+      </div>
 
-<div class="page-view" id="view-activity">
+      <!-- ACTIVITY LOG -->
+      <div class="page-view" id="view-activity">
         <div class="card">
           <div class="card-header"><span class="card-title"><i class="fas fa-history" style="color:var(--gold)"></i> Activity Log</span><button class="btn btn-outline btn-sm" onclick="loadActivityLog()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
           <div class="card-body" id="activity-log-list"><p class="text-muted text-sm">Loading…</p></div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-roles">
+      <!-- ROLES (admin) -->
+      <div class="page-view" id="view-roles">
         <div class="card mb-4">
           <div class="card-header">
             <span class="card-title"><i class="fas fa-user-tag" style="color:var(--gold)"></i> Custom Roles & Permissions</span>
@@ -1234,9 +1203,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           <div class="card-body"><p class="text-sm text-muted">Define custom roles for your team. Assign any team member to any role. Pre-seeded with a 4-tier hierarchy — edit freely.</p></div>
         </div>
         <div id="roles-list"></div>
-      </div
+      </div>
 
-<div class="page-view" id="view-deadline-rules">
+      <!-- DEADLINE RULES -->
+      <div class="page-view" id="view-deadline-rules">
         <div class="card mb-4">
           <div class="card-header">
             <span class="card-title"><i class="fas fa-gavel" style="color:var(--gold)"></i> Court Filing Deadline Rules</span>
@@ -1245,9 +1215,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           <div class="card-body"><p class="text-sm text-muted">Pre-seeded with common Indian court deadlines (CPC, CrPC, Limitation Act, CERT-In). Edit, disable, or add your own rules.</p></div>
         </div>
         <div id="deadline-rules-list"></div>
-      </div
+      </div>
 
-<div class="page-view" id="view-finances">
+      <!-- FINANCES -->
+      <div class="page-view" id="view-finances">
         <div class="finances-summary" id="fin-summary-cards"></div>
         <div class="card">
           <div class="card-header">
@@ -1264,9 +1235,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           </div>
           <div class="card-body" id="fin-client-list"></div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-documents">
+      <!-- DOCUMENTS -->
+      <div class="page-view" id="view-documents">
         <div class="search-bar">
           <div class="search-input-wrap"><i class="fas fa-search"></i><input class="search-input" id="doc-search" type="text" placeholder="Search documents…" oninput="renderDocuments()"/></div>
           <select class="form-control" id="doc-filter-client" style="width:auto;" onchange="renderDocuments()"><option value="">All Clients</option></select>
@@ -1276,17 +1248,19 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           <div class="table-wrap"><table class="data-table"><thead><tr><th>File Name</th><th>Client</th><th>Category</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody id="documents-tbody"></tbody></table></div>
           <div id="documents-empty" class="empty-state" style="display:none;"><i class="fas fa-folder-open"></i><div class="empty-state-title">No documents yet</div></div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-templates">
+      <!-- TEMPLATES -->
+      <div class="page-view" id="view-templates">
         <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
           <button class="btn btn-gold" onclick="openTemplateModal()"><i class="fas fa-plus"></i> New Template</button>
         </div>
         <div id="templates-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
         <div id="templates-empty" class="empty-state" style="display:none;"><i class="fas fa-file-alt"></i><div class="empty-state-title">No templates yet</div><div class="empty-state-desc">Create reusable drafts — visible to your whole team</div></div>
-      </div
+      </div>
 
-<div class="page-view" id="view-chat">
+      <!-- CHAT -->
+      <div class="page-view" id="view-chat">
         <div class="chat-layout">
           <div style="display:flex;flex-direction:column;width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg);">
             <div class="chat-sidebar" id="chat-contact-list" style="flex:1;overflow-y:auto;border-right:none;width:100%;"></div>
@@ -1311,9 +1285,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
             </div>
           </div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-tasks">
+      <!-- TASKS -->
+      <div class="page-view" id="view-tasks">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
           <div class="search-bar" style="margin-bottom:0;flex:1;">
             <select class="form-control" id="task-filter-status" style="width:auto;" onchange="renderTasks()"><option value="">All Statuses</option><option value="open">Open</option><option value="in_progress">In Progress</option><option value="in_review">In Review</option><option value="done">Done</option><option value="cancelled">Cancelled</option></select>
@@ -1327,9 +1302,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           <div class="kanban-col"><div class="kanban-col-title">Done <span id="kc-done-count">0</span></div><div id="kc-done"></div></div>
           <div class="kanban-col"><div class="kanban-col-title">Cancelled <span id="kc-cancelled-count">0</span></div><div id="kc-cancelled"></div></div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-users">
+      <!-- USERS (admin only) -->
+      <div class="page-view" id="view-users">
         <div id="users-hierarchy-strip"></div>
         <div class="card mb-4">
           <div class="card-header"><span class="card-title">Signup Code</span></div>
@@ -1352,9 +1328,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
           <div class="card-header"><span class="card-title">Team Members</span></div>
           <div class="card-body" id="users-list"></div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-formbuilder">
+      <!-- FORM BUILDER (admin only) -->
+      <div class="page-view" id="view-formbuilder">
         <div class="card mb-4">
           <div class="card-header">
             <span class="card-title">Select Category to Configure</span>
@@ -1377,9 +1354,10 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
             </div>
           </div>
         </div>
-      </div
+      </div>
 
-<div class="page-view" id="view-settings">
+      <!-- SETTINGS (rebuilt mobile-first) -->
+      <div class="page-view" id="view-settings">
         <div class="settings-wrap">
 
           <!-- ── APPEARANCE ── -->
@@ -1456,9 +1434,9 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
                 <div class="settings-row-text"><div class="settings-row-label">Database</div><div class="settings-row-desc">Supabase Postgres with Row-Level Security</div></div>
                 <span class="badge badge-active"><i class="fas fa-lock"></i> Active</span>
               </div>
-              <div class="settings-row" id="firm-plan-row" style="display:none;">
-                <div class="settings-row-text"><div class="settings-row-label">Plan</div><div class="settings-row-desc" id="firm-plan-desc">—</div></div>
-                <button class="btn btn-outline btn-sm" onclick="window.open('https://billing.lexdesk.app','_blank')"><i class="fas fa-credit-card"></i> Manage Billing</button>
+              <div class="settings-row" id="migration-check-row" style="display:none;">
+                <div class="settings-row-text"><div class="settings-row-label">Migration Status</div><div class="settings-row-desc" id="migration-check-desc">Checking…</div></div>
+                <button class="btn btn-outline btn-sm" onclick="checkMigrationStatus()"><i class="fas fa-sync-alt"></i> Re-check</button>
               </div>
               <div class="settings-row">
                 <div class="settings-row-text"><div class="settings-row-label">Export to Excel</div><div class="settings-row-desc">Clients, Documents, Users & Tasks in one workbook</div></div>
@@ -1469,79 +1447,55 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
                 <button class="toggle" id="chatbot-toggle" onclick="toggleChatbotSetting(this)" style="flex-shrink:0;"></button>
               </div>
               <div class="settings-row" id="reset-row" style="display:none;">
-                <div class="settings-row-text"><div class="settings-row-label">Export Firm Data</div><div class="settings-row-desc">Download all clients, documents, and records as a backup (admin only)</div></div>
-                <button class="btn btn-outline btn-sm" onclick="exportExcel()"><i class="fas fa-download"></i> Export</button>
-              </div>
-              <div class="settings-row" id="support-row">
-                <div class="settings-row-text"><div class="settings-row-label">Support</div><div class="settings-row-desc">Questions about your account or billing</div></div>
-                <button class="btn btn-outline btn-sm" onclick="window.open('mailto:support@lexdesk.app','_blank')"><i class="fas fa-envelope"></i> Contact Support</button>
+                <div class="settings-row-text"><div class="settings-row-label" style="color:var(--danger);">Disconnect Database</div><div class="settings-row-desc">Clears local Supabase config from this browser</div></div>
+                <button class="btn btn-danger btn-sm" onclick="disconnectSupabase()"><i class="fas fa-unlink"></i> Disconnect</button>
               </div>
             </div>
           </div>
 
         </div>
-      </div
-
+      </div>
 
     </div><!-- /page -->
   </div><!-- /main -->
 </div><!-- /app -->
-
-
-<div class="modal-backdrop" id="modal-add-user">
-  <div class="modal" style="max-width:480px;">
+<!-- CLIENT DETAIL MODAL -->
+<div class="modal-backdrop" id="modal-detail">
+  <div class="modal" style="max-width:820px;">
     <div class="modal-header">
-      <div><div class="modal-title" id="au-title">Assign Role</div>
-      <div class="modal-sub">Set the team member's base role and custom permission level</div></div>
-      <button class="modal-close" onclick="closeModal('modal-add-user')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid" style="gap:13px;">
-        <div class="form-group"><label class="form-label">Name</label><input class="form-control" id="au-name" type="text" disabled/></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="au-email" type="email" disabled/></div>
-        <div class="form-group">
-          <label class="form-label">Base Role</label>
-          <select class="form-control" id="au-role">
-            <option value="assistant">Team Member (Non-Admin)</option>
-            <option value="admin">Admin / Senior Advocate (Full Access)</option>
-          </select>
-          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Admin gets full access regardless of custom role below.</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Custom Role / Hierarchy Position</label>
-          <select class="form-control" id="au-custom-role">
-            <option value="">— No custom role assigned —</option>
-          </select>
-          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Custom roles define specific permissions (view clients, finances, etc.). Create roles in <strong>Admin → Roles</strong>.</div>
-        </div>
-        <div class="form-group"><label class="form-label">Bar Registration No.</label><input class="form-control" id="au-bar" type="text"/></div>
+      <div><div class="modal-title" id="det-title">Client</div><div class="modal-sub" id="det-sub"></div></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-gold btn-sm" id="det-edit-btn" onclick="editCurrentClient()"><i class="fas fa-edit"></i> Edit</button>
+        <button class="modal-close" onclick="closeModal('modal-detail')">&times;</button>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-add-user')">Cancel</button>
-      <button class="btn btn-gold" onclick="approveUser()"><i class="fas fa-check"></i> Approve & Save</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-change-password">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-header"><div><div class="modal-title">Change Password</div></div><button class="modal-close" onclick="closeModal('modal-change-password')">&times;</button></div>
     <div class="modal-body">
-      <div class="form-grid" style="gap:13px;">
-        <div class="form-group"><label class="form-label">Current Password</label><input class="form-control" id="pwd-current" type="password" onkeydown="if(event.key==='Enter')changePassword()"/></div>
-        <div class="form-group"><label class="form-label">New Password</label><input class="form-control" id="pwd-new" type="password" placeholder="Min. 8 characters" onkeydown="if(event.key==='Enter')changePassword()"/></div>
-        <div class="form-group"><label class="form-label">Confirm New Password</label><input class="form-control" id="pwd-confirm" type="password" onkeydown="if(event.key==='Enter')changePassword()"/></div>
+      <div class="detail-meta-grid" id="det-meta"></div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+        <button class="tab-btn" onclick="switchTab('case-details')">Case Details</button>
+        <button class="tab-btn" onclick="switchTab('payments')">Payments</button>
+        <button class="tab-btn" onclick="switchTab('documents')">Documents</button>
+        <button class="tab-btn" onclick="switchTab('deadlines')">Deadlines</button>
+        <button class="tab-btn" onclick="switchTab('history')">History</button>
       </div>
-      <p id="pwd-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
+      <div class="tab-panel active" id="tab-overview"></div>
+      <div class="tab-panel" id="tab-case-details"></div>
+      <div class="tab-panel" id="tab-payments"></div>
+      <div class="tab-panel" id="tab-documents"></div>
+      <div class="tab-panel" id="tab-deadlines"></div>
+      <div class="tab-panel" id="tab-history"><div class="timeline" id="det-history"></div></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-change-password')">Cancel</button>
-      <button class="btn btn-gold" onclick="changePassword()"><i class="fas fa-key"></i> Update Password</button>
+      <button class="btn btn-danger btn-sm" id="det-delete-btn" onclick="deleteCurrentClient()"><i class="fas fa-trash"></i> Delete</button>
+      <button class="btn btn-outline btn-sm" onclick="generateInvoice(S.detailClientId)" title="Generate PDF Invoice"><i class="fas fa-file-invoice"></i> Invoice</button>
+      <button class="btn btn-outline btn-sm" id="det-portal-btn" onclick="generatePortalLink(S.detailClientId)" title="Generate Client Portal Link"><i class="fas fa-link"></i> Portal Link</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-detail')">Close</button>
     </div>
   </div>
-</div
+</div>
 
+<!-- ADD/EDIT CLIENT MODAL -->
 <div class="modal-backdrop" id="modal-client">
   <div class="modal" style="max-width:760px;">
     <div class="modal-header">
@@ -1593,183 +1547,26 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
       <button class="btn btn-primary" id="mc-save-btn" onclick="saveClient()"><i class="fas fa-save"></i> <span id="mc-save-txt">Save Client</span></button>
     </div>
   </div>
-</div
+</div>
 
-<div class="modal-backdrop" id="modal-create-group">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header"><div><div class="modal-title">New Group Chat</div></div><button class="modal-close" onclick="closeModal('modal-create-group')">&times;</button></div>
-    <div class="modal-body">
-      <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Group Name <span class="required">*</span></label><input class="form-control" id="new-group-name" type="text" placeholder="e.g. Cyber Team" onkeydown="if(event.key==='Enter')createGroup()"/></div>
-      <div class="form-group"><label class="form-label">Add Members</label><div class="form-hint mb-3">Senior Advocates are always included as group admins.</div><div id="new-group-members" style="max-height:200px;overflow-y:auto;padding:4px 0;"></div></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-create-group')">Cancel</button>
-      <button class="btn btn-gold" onclick="createGroup()"><i class="fas fa-users"></i> Create Group</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-deadline-rule">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-header"><div><div class="modal-title" id="dr-modal-title">New Deadline Rule</div></div><button class="modal-close" onclick="closeModal('modal-deadline-rule')">&times;</button></div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-2" style="gap:13px;">
-        <div class="form-group"><label class="form-label">Rule Name <span class="required">*</span></label><input class="form-control" id="dr-name" type="text" placeholder="e.g. Written Statement"/></div>
-        <div class="form-group"><label class="form-label">Statute / Citation</label><input class="form-control" id="dr-statute" type="text" placeholder="e.g. CPC Order VIII Rule 1"/></div>
-        <div class="form-group"><label class="form-label">Case Category</label><select class="form-control" id="dr-category"></select></div>
-        <div class="form-group"><label class="form-label">Trigger Field ID</label><input class="form-control" id="dr-trigger" type="text" placeholder="e.g. created_at, nextHearing, incidentDate"/></div>
-        <div class="form-group"><label class="form-label">Days</label><input class="form-control" id="dr-days" type="number" min="1" value="30"/></div>
-        <div class="form-group"><label class="form-label">Direction</label><select class="form-control" id="dr-direction"><option value="after">After trigger date</option><option value="before">Before trigger date</option></select></div>
-        <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Description</label><input class="form-control" id="dr-description" type="text" placeholder="Brief explanation of this rule"/></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-deadline-rule')">Cancel</button>
-      <button class="btn btn-gold" onclick="saveDeadlineRule()"><i class="fas fa-save"></i> Save Rule</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-detail">
-  <div class="modal" style="max-width:820px;">
+<!-- FILE PREVIEW MODAL -->
+<div class="modal-backdrop" id="modal-preview">
+  <div class="modal" style="max-width:760px;">
     <div class="modal-header">
-      <div><div class="modal-title" id="det-title">Client</div><div class="modal-sub" id="det-sub"></div></div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-gold btn-sm" id="det-edit-btn" onclick="editCurrentClient()"><i class="fas fa-edit"></i> Edit</button>
-        <button class="modal-close" onclick="closeModal('modal-detail')">&times;</button>
-      </div>
+      <div><div class="modal-title" id="prev-title">File</div><div class="modal-sub" id="prev-sub"></div></div>
+      <button class="modal-close" onclick="closeModal('modal-preview')">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="detail-meta-grid" id="det-meta"></div>
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
-        <button class="tab-btn" onclick="switchTab('case-details')">Case Details</button>
-        <button class="tab-btn" onclick="switchTab('payments')">Payments</button>
-        <button class="tab-btn" onclick="switchTab('documents')">Documents</button>
-        <button class="tab-btn" onclick="switchTab('deadlines')">Deadlines</button>
-        <button class="tab-btn" onclick="switchTab('history')">History</button>
-      </div>
-      <div class="tab-panel active" id="tab-overview"></div>
-      <div class="tab-panel" id="tab-case-details"></div>
-      <div class="tab-panel" id="tab-payments"></div>
-      <div class="tab-panel" id="tab-documents"></div>
-      <div class="tab-panel" id="tab-deadlines"></div>
-      <div class="tab-panel" id="tab-history"><div class="timeline" id="det-history"></div></div>
+      <div class="preview-body" id="prev-body"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="det-delete-btn" onclick="deleteCurrentClient()"><i class="fas fa-trash"></i> Delete</button>
-      <button class="btn btn-outline btn-sm" onclick="generateInvoice(S.detailClientId)" title="Generate PDF Invoice"><i class="fas fa-file-invoice"></i> Invoice</button>
-      <button class="btn btn-outline btn-sm" id="det-portal-btn" onclick="generatePortalLink(S.detailClientId)" title="Generate Client Portal Link"><i class="fas fa-link"></i> Portal Link</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-detail')">Close</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-preview')">Close</button>
+      <button class="btn btn-gold" id="prev-download-btn" onclick="downloadPreviewFile()"><i class="fas fa-download"></i> Download</button>
     </div>
   </div>
-</div
+</div>
 
-<div class="modal-backdrop" id="modal-forgot-password">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-header"><div><div class="modal-title">Reset Password</div><div class="modal-sub">We'll send a reset link to your email</div></div><button class="modal-close" onclick="closeModal('modal-forgot-password')">&times;</button></div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Email Address</label>
-        <input class="form-control" id="forgot-email" type="email" onkeydown="if(event.key==='Enter')forgotPassword()"/>
-      </div>
-      <p id="forgot-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-forgot-password')">Cancel</button>
-      <button class="btn btn-gold" onclick="forgotPassword()"><i class="fas fa-envelope"></i> Send Reset Link</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-group-settings">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header"><div><div class="modal-title">Group Settings</div></div><button class="modal-close" onclick="closeModal('modal-group-settings')">&times;</button></div>
-    <div class="modal-body">
-      <div class="form-group" style="margin-bottom:14px;">
-        <label class="form-label">Group Name</label>
-        <div style="display:flex;gap:8px;"><input class="form-control" id="gs-name" type="text"/><button class="btn btn-outline btn-sm" onclick="saveGroupName()"><i class="fas fa-save"></i></button></div>
-      </div>
-      <div class="section-divider">Members</div>
-      <div id="gs-members" style="max-height:200px;overflow-y:auto;margin-bottom:12px;"></div>
-      <div style="display:flex;gap:8px;">
-        <select class="form-control" id="gs-add-member"></select>
-        <button class="btn btn-gold btn-sm" onclick="addGroupMember()"><i class="fas fa-plus"></i> Add</button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" onclick="deleteGroup()" title="Delete group permanently"><i class="fas fa-trash"></i> Delete Group</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-group-settings')">Done</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-manage-group">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header"><div><div class="modal-title">Manage Group</div></div><button class="modal-close" onclick="closeModal('modal-manage-group')">&times;</button></div>
-    <div class="modal-body">
-      <div id="manage-grp-admin-controls">
-        <div class="form-group" style="margin-bottom:14px;">
-          <label class="form-label">Group Name</label>
-          <div style="display:flex;gap:8px;"><input class="form-control" id="manage-grp-name" type="text"/><button class="btn btn-outline btn-sm" onclick="saveGroupName()">Save</button></div>
-        </div>
-        <div class="form-group" style="margin-bottom:14px;">
-          <label class="form-label">Add Member</label>
-          <div style="display:flex;gap:8px;"><select class="form-control" id="manage-grp-add-user"></select><button class="btn btn-gold btn-sm" onclick="addToGroup()"><i class="fas fa-plus"></i></button></div>
-        </div>
-      </div>
-      <div class="form-group"><label class="form-label">Members</label><div id="manage-grp-members"></div></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" onclick="leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-manage-group')">Close</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-new-cat">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header"><div><div class="modal-title">New Case Category</div></div><button class="modal-close" onclick="closeModal('modal-new-cat')">&times;</button></div>
-    <div class="modal-body">
-      <div class="form-grid" style="gap:13px;">
-        <div class="form-group"><label class="form-label">Category Name <span class="required">*</span></label><input class="form-control" id="nc-name" type="text" placeholder="e.g. Immigration"/></div>
-        <div class="form-group"><label class="form-label">Icon (Font Awesome class)</label><input class="form-control" id="nc-icon" type="text" placeholder="fas fa-globe"/></div>
-        <div class="form-group"><label class="form-label">Color</label><select class="form-control" id="nc-color"><option value="blue">Blue</option><option value="green">Green</option><option value="purple">Purple</option><option value="orange">Orange</option><option value="red">Red</option></select></div>
-      </div>
-    </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-cat')">Cancel</button><button class="btn btn-gold" onclick="createCategory()"><i class="fas fa-plus"></i> Create</button></div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-note-share">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal-header">
-      <div><div class="modal-title" id="note-share-title">Share Note</div></div>
-      <button class="modal-close" onclick="closeModal('modal-note-share')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="section-divider">Add Person</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-        <select class="form-control" id="note-share-user" style="flex:1;min-width:150px;"></select>
-        <select class="form-control" id="note-share-perm" style="width:auto;">
-          <option value="viewer">Viewer</option>
-          <option value="editor">Editor</option>
-        </select>
-        <button class="btn btn-gold btn-sm" onclick="addNoteShare()"><i class="fas fa-plus"></i> Share</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;">
-        <input type="checkbox" id="note-share-send-chat" style="width:16px;height:16px;"/>
-        <label for="note-share-send-chat">Also send a message to this person in chat</label>
-      </div>
-      <div class="section-divider">Currently Shared With</div>
-      <div id="note-current-shares"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-note-share')">Done</button>
-    </div>
-  </div>
-</div
-
+<!-- NOTE EDITOR MODAL -->
 <div class="modal-backdrop" id="modal-note">
   <div class="modal" style="max-width:780px;">
     <div class="modal-header">
@@ -1799,8 +1596,39 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
       <button class="btn btn-gold" id="note-save-btn" onclick="saveNote()"><i class="fas fa-save"></i> Save</button>
     </div>
   </div>
-</div
+</div>
 
+<!-- NOTE SHARE MODAL -->
+<div class="modal-backdrop" id="modal-note-share">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="note-share-title">Share Note</div></div>
+      <button class="modal-close" onclick="closeModal('modal-note-share')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="section-divider">Add Person</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <select class="form-control" id="note-share-user" style="flex:1;min-width:150px;"></select>
+        <select class="form-control" id="note-share-perm" style="width:auto;">
+          <option value="viewer">Viewer</option>
+          <option value="editor">Editor</option>
+        </select>
+        <button class="btn btn-gold btn-sm" onclick="addNoteShare()"><i class="fas fa-plus"></i> Share</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;">
+        <input type="checkbox" id="note-share-send-chat" style="width:16px;height:16px;"/>
+        <label for="note-share-send-chat">Also send a message to this person in chat</label>
+      </div>
+      <div class="section-divider">Currently Shared With</div>
+      <div id="note-current-shares"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-note-share')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD PAYMENT MODAL -->
 <div class="modal-backdrop" id="modal-payment">
   <div class="modal" style="max-width:440px;">
     <div class="modal-header"><div><div class="modal-title">Record Payment</div><div class="modal-sub" id="pay-client-name"></div></div><button class="modal-close" onclick="closeModal('modal-payment')">&times;</button></div>
@@ -1817,82 +1645,113 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
       <button class="btn btn-gold" onclick="savePayment()"><i class="fas fa-save"></i> Record Payment</button>
     </div>
   </div>
-</div
+</div>
 
-<div class="modal-backdrop" id="modal-portal-link">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header"><div><div class="modal-title">Client Portal Link</div><div class="modal-sub">Share the link and PIN separately for security</div></div><button class="modal-close" onclick="closeModal('modal-portal-link')">&times;</button></div>
-    <div class="modal-body">
-      <div style="background:var(--warning-bg);border:1px solid #fbd38d;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;">
-        <i class="fas fa-shield-alt" style="color:#d69e2e;margin-right:6px;"></i>
-        <strong>Important:</strong> Send the link and PIN through <em>separate</em> channels (e.g. link via email, PIN via SMS) for security.
-      </div>
-      <div class="form-group" style="margin-bottom:14px;">
-        <label class="form-label">Portal Link (send this to the client)</label>
-        <div style="display:flex;gap:8px;">
-          <input class="form-control" id="portal-link-url" type="text" readonly style="font-size:12px;"/>
-          <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('portal-link-url').value).then(()=>showToast('Link copied!','success'))"><i class="fas fa-copy"></i></button>
-        </div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--navy);border-radius:10px;color:var(--gold);">
-        <div style="font-size:12px;opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Client PIN (share separately)</div>
-        <div id="portal-link-pin" style="font-size:36px;font-weight:700;letter-spacing:12px;"></div>
-        <div style="font-size:11px;opacity:.5;margin-top:6px;">Valid for 90 days</div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-portal-link')">Close</button>
-      <button class="btn btn-gold" onclick="copyPortalLink()"><i class="fas fa-copy"></i> Copy Both</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-preview">
-  <div class="modal" style="max-width:760px;">
+<!-- ADD/EDIT USER MODAL (role assignment for pending or existing users) -->
+<div class="modal-backdrop" id="modal-add-user">
+  <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <div><div class="modal-title" id="prev-title">File</div><div class="modal-sub" id="prev-sub"></div></div>
-      <button class="modal-close" onclick="closeModal('modal-preview')">&times;</button>
+      <div><div class="modal-title" id="au-title">Assign Role</div>
+      <div class="modal-sub">Set the team member's base role and custom permission level</div></div>
+      <button class="modal-close" onclick="closeModal('modal-add-user')">&times;</button>
     </div>
-    <div class="modal-body">
-      <div class="preview-body" id="prev-body"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-preview')">Close</button>
-      <button class="btn btn-gold" id="prev-download-btn" onclick="downloadPreviewFile()"><i class="fas fa-download"></i> Download</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-role">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-header"><div><div class="modal-title" id="role-modal-title">New Role</div></div><button class="modal-close" onclick="closeModal('modal-role')">&times;</button></div>
-    <div class="modal-body">
-      <div class="form-group" style="margin-bottom:16px;"><label class="form-label">Role Name <span class="required">*</span></label><input class="form-control" id="role-name-input" type="text" placeholder="e.g. Junior Advocate, Senior Assistant"/></div>
-      <div class="form-group"><label class="form-label">Permissions</label>
-        <div id="role-permissions" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:0 12px;"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-role')">Cancel</button>
-      <button class="btn btn-gold" onclick="saveCustomRole()"><i class="fas fa-save"></i> Save Role</button>
-    </div>
-  </div>
-</div
-
-<div class="modal-backdrop" id="modal-set-new-password">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-header"><div><div class="modal-title">Set New Password</div></div></div>
     <div class="modal-body">
       <div class="form-grid" style="gap:13px;">
-        <div class="form-group"><label class="form-label">New Password <span class="required">*</span></label><input class="form-control" id="reset-new-pwd" type="password" placeholder="Min. 8 characters"/></div>
-        <div class="form-group"><label class="form-label">Confirm Password <span class="required">*</span></label><input class="form-control" id="reset-confirm-pwd" type="password"/></div>
+        <div class="form-group"><label class="form-label">Name</label><input class="form-control" id="au-name" type="text" disabled/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="au-email" type="email" disabled/></div>
+        <div class="form-group">
+          <label class="form-label">Base Role</label>
+          <select class="form-control" id="au-role">
+            <option value="assistant">Team Member (Non-Admin)</option>
+            <option value="admin">Admin / Senior Advocate (Full Access)</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Admin gets full access regardless of custom role below.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Custom Role / Hierarchy Position</label>
+          <select class="form-control" id="au-custom-role">
+            <option value="">— No custom role assigned —</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Custom roles define specific permissions (view clients, finances, etc.). Create roles in <strong>Admin → Roles</strong>.</div>
+        </div>
+        <div class="form-group"><label class="form-label">Bar Registration No.</label><input class="form-control" id="au-bar" type="text"/></div>
       </div>
-      <p id="reset-pwd-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
     </div>
-    <div class="modal-footer"><button class="btn btn-gold w-full" style="justify-content:center;" onclick="setNewPasswordFromReset()"><i class="fas fa-lock"></i> Set Password</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-user')">Cancel</button>
+      <button class="btn btn-gold" onclick="approveUser()"><i class="fas fa-check"></i> Approve & Save</button>
+    </div>
   </div>
-</div
+</div>
 
+<!-- TEMPLATE MODAL -->
+<div class="modal-backdrop" id="modal-template">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="tpl-modal-title">New Draft Template</div><div class="modal-sub">Use <code>{{CLIENT_NAME}}</code>, <code>{{CLIENT_ID}}</code>, <code>{{DATE}}</code>, <code>{{CASE_TYPE}}</code></div></div>
+      <button class="modal-close" onclick="closeModal('modal-template')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;margin-bottom:14px;">
+        <div class="form-group"><label class="form-label">Template Name <span class="required">*</span></label><input class="form-control" id="tpl-name" type="text" placeholder="e.g. NDA Draft"/></div>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="tpl-category"></select></div>
+      </div>
+      <div class="form-group" style="margin-bottom:6px;"><label class="form-label">Content <span class="required">*</span></label></div>
+      <div class="rich-toolbar">
+        <button onclick="richCmd('bold')"><i class="fas fa-bold"></i></button>
+        <button onclick="richCmd('italic')"><i class="fas fa-italic"></i></button>
+        <button onclick="richCmd('underline')"><i class="fas fa-underline"></i></button>
+        <button onclick="richCmd('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+        <button onclick="richCmd('insertOrderedList')"><i class="fas fa-list-ol"></i></button>
+        <button onclick="insertPlaceholder('{{CLIENT_NAME}}')" style="width:auto;padding:0 8px;font-size:11px;">{{NAME}}</button>
+        <button onclick="insertPlaceholder('{{DATE}}')" style="width:auto;padding:0 8px;font-size:11px;">{{DATE}}</button>
+        <button onclick="insertPlaceholder('{{CLIENT_ID}}')" style="width:auto;padding:0 8px;font-size:11px;">{{ID}}</button>
+      </div>
+      <div class="rich-editor" id="tpl-content" contenteditable="true"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-template')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveTemplate()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATE USE MODAL -->
+<div class="modal-backdrop" id="modal-use-template">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="ut-title">Use Template</div></div>
+      <button class="modal-close" onclick="closeModal('modal-use-template')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Select Client</label><select class="form-control" id="ut-client" onchange="previewTemplate()"></select></div>
+      <div class="form-group" style="margin-bottom:6px;"><label class="form-label">Preview</label></div>
+      <div id="ut-preview" class="template-preview" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-use-template')">Close</button>
+      <button class="btn btn-primary" onclick="copyTemplateText()"><i class="fas fa-copy"></i> Copy</button>
+      <button class="btn btn-gold" onclick="downloadTemplateText()"><i class="fas fa-download"></i> Download .txt</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW CATEGORY MODAL -->
+<div class="modal-backdrop" id="modal-new-cat">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div><div class="modal-title">New Case Category</div></div><button class="modal-close" onclick="closeModal('modal-new-cat')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;">
+        <div class="form-group"><label class="form-label">Category Name <span class="required">*</span></label><input class="form-control" id="nc-name" type="text" placeholder="e.g. Immigration"/></div>
+        <div class="form-group"><label class="form-label">Icon (Font Awesome class)</label><input class="form-control" id="nc-icon" type="text" placeholder="fas fa-globe"/></div>
+        <div class="form-group"><label class="form-label">Color</label><select class="form-control" id="nc-color"><option value="blue">Blue</option><option value="green">Green</option><option value="purple">Purple</option><option value="orange">Orange</option><option value="red">Red</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-cat')">Cancel</button><button class="btn btn-gold" onclick="createCategory()"><i class="fas fa-plus"></i> Create</button></div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
 <div class="modal-backdrop" id="modal-task">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header"><div><div class="modal-title" id="task-modal-title">New Task</div></div><button class="modal-close" onclick="closeModal('modal-task')">&times;</button></div>
@@ -1925,107 +1784,240 @@ html[data-theme="light"] #chat-search-input::placeholder{color:rgba(0,0,0,.32)!i
       <button class="btn btn-gold" id="task-save-btn" onclick="saveTask()"><i class="fas fa-save"></i> <span id="task-save-txt">Create Task</span></button>
     </div>
   </div>
-</div
+</div>
 
-<div class="modal-backdrop" id="modal-template">
-  <div class="modal" style="max-width:700px;">
-    <div class="modal-header">
-      <div><div class="modal-title" id="tpl-modal-title">New Draft Template</div><div class="modal-sub">Use <code>{{CLIENT_NAME}}</code>, <code>{{CLIENT_ID}}</code>, <code>{{DATE}}</code>, <code>{{CASE_TYPE}}</code></div></div>
-      <button class="modal-close" onclick="closeModal('modal-template')">&times;</button>
-    </div>
+<!-- PORTAL LINK MODAL -->
+<div class="modal-backdrop" id="modal-portal-link">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header"><div><div class="modal-title">Client Portal Link</div><div class="modal-sub">Share the link and PIN separately for security</div></div><button class="modal-close" onclick="closeModal('modal-portal-link')">&times;</button></div>
     <div class="modal-body">
-      <div class="form-grid" style="gap:13px;margin-bottom:14px;">
-        <div class="form-group"><label class="form-label">Template Name <span class="required">*</span></label><input class="form-control" id="tpl-name" type="text" placeholder="e.g. NDA Draft"/></div>
-        <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="tpl-category"></select></div>
+      <div style="background:var(--warning-bg);border:1px solid #fbd38d;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;">
+        <i class="fas fa-shield-alt" style="color:#d69e2e;margin-right:6px;"></i>
+        <strong>Important:</strong> Send the link and PIN through <em>separate</em> channels (e.g. link via email, PIN via SMS) for security.
       </div>
-      <div class="form-group" style="margin-bottom:6px;"><label class="form-label">Content <span class="required">*</span></label></div>
-      <div class="rich-toolbar">
-        <button onclick="richCmd('bold')"><i class="fas fa-bold"></i></button>
-        <button onclick="richCmd('italic')"><i class="fas fa-italic"></i></button>
-        <button onclick="richCmd('underline')"><i class="fas fa-underline"></i></button>
-        <button onclick="richCmd('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
-        <button onclick="richCmd('insertOrderedList')"><i class="fas fa-list-ol"></i></button>
-        <button onclick="insertPlaceholder('{{CLIENT_NAME}}')" style="width:auto;padding:0 8px;font-size:11px;">{{NAME}}</button>
-        <button onclick="insertPlaceholder('{{DATE}}')" style="width:auto;padding:0 8px;font-size:11px;">{{DATE}}</button>
-        <button onclick="insertPlaceholder('{{CLIENT_ID}}')" style="width:auto;padding:0 8px;font-size:11px;">{{ID}}</button>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Portal Link (send this to the client)</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-control" id="portal-link-url" type="text" readonly style="font-size:12px;"/>
+          <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('portal-link-url').value).then(()=>showToast('Link copied!','success'))"><i class="fas fa-copy"></i></button>
+        </div>
       </div>
-      <div class="rich-editor" id="tpl-content" contenteditable="true"></div>
+      <div style="text-align:center;padding:16px;background:var(--navy);border-radius:10px;color:var(--gold);">
+        <div style="font-size:12px;opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Client PIN (share separately)</div>
+        <div id="portal-link-pin" style="font-size:36px;font-weight:700;letter-spacing:12px;"></div>
+        <div style="font-size:11px;opacity:.5;margin-top:6px;">Valid for 90 days</div>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-template')">Cancel</button>
-      <button class="btn btn-gold" onclick="saveTemplate()"><i class="fas fa-save"></i> Save</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-portal-link')">Close</button>
+      <button class="btn btn-gold" onclick="copyPortalLink()"><i class="fas fa-copy"></i> Copy Both</button>
     </div>
   </div>
-</div
+</div>
 
-<div class="modal-backdrop" id="modal-use-template">
-  <div class="modal" style="max-width:700px;">
-    <div class="modal-header">
-      <div><div class="modal-title" id="ut-title">Use Template</div></div>
-      <button class="modal-close" onclick="closeModal('modal-use-template')">&times;</button>
-    </div>
+<!-- DEADLINE RULE MODAL -->
+<div class="modal-backdrop" id="modal-deadline-rule">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><div><div class="modal-title" id="dr-modal-title">New Deadline Rule</div></div><button class="modal-close" onclick="closeModal('modal-deadline-rule')">&times;</button></div>
     <div class="modal-body">
-      <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Select Client</label><select class="form-control" id="ut-client" onchange="previewTemplate()"></select></div>
-      <div class="form-group" style="margin-bottom:6px;"><label class="form-label">Preview</label></div>
-      <div id="ut-preview" class="template-preview" style="max-height:300px;overflow-y:auto;"></div>
+      <div class="form-grid form-grid-2" style="gap:13px;">
+        <div class="form-group"><label class="form-label">Rule Name <span class="required">*</span></label><input class="form-control" id="dr-name" type="text" placeholder="e.g. Written Statement"/></div>
+        <div class="form-group"><label class="form-label">Statute / Citation</label><input class="form-control" id="dr-statute" type="text" placeholder="e.g. CPC Order VIII Rule 1"/></div>
+        <div class="form-group"><label class="form-label">Case Category</label><select class="form-control" id="dr-category"></select></div>
+        <div class="form-group"><label class="form-label">Trigger Field ID</label><input class="form-control" id="dr-trigger" type="text" placeholder="e.g. created_at, nextHearing, incidentDate"/></div>
+        <div class="form-group"><label class="form-label">Days</label><input class="form-control" id="dr-days" type="number" min="1" value="30"/></div>
+        <div class="form-group"><label class="form-label">Direction</label><select class="form-control" id="dr-direction"><option value="after">After trigger date</option><option value="before">Before trigger date</option></select></div>
+        <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Description</label><input class="form-control" id="dr-description" type="text" placeholder="Brief explanation of this rule"/></div>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-use-template')">Close</button>
-      <button class="btn btn-primary" onclick="copyTemplateText()"><i class="fas fa-copy"></i> Copy</button>
-      <button class="btn btn-gold" onclick="downloadTemplateText()"><i class="fas fa-download"></i> Download .txt</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-deadline-rule')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveDeadlineRule()"><i class="fas fa-save"></i> Save Rule</button>
     </div>
   </div>
-</div
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="modal-backdrop" id="modal-create-group">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div><div class="modal-title">New Group Chat</div></div><button class="modal-close" onclick="closeModal('modal-create-group')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Group Name <span class="required">*</span></label><input class="form-control" id="new-group-name" type="text" placeholder="e.g. Cyber Team" onkeydown="if(event.key==='Enter')createGroup()"/></div>
+      <div class="form-group"><label class="form-label">Add Members</label><div class="form-hint mb-3">Senior Advocates are always included as group admins.</div><div id="new-group-members" style="max-height:200px;overflow-y:auto;padding:4px 0;"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-create-group')">Cancel</button>
+      <button class="btn btn-gold" onclick="createGroup()"><i class="fas fa-users"></i> Create Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE GROUP MODAL -->
+<div class="modal-backdrop" id="modal-manage-group">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div><div class="modal-title">Manage Group</div></div><button class="modal-close" onclick="closeModal('modal-manage-group')">&times;</button></div>
+    <div class="modal-body">
+      <div id="manage-grp-admin-controls">
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label">Group Name</label>
+          <div style="display:flex;gap:8px;"><input class="form-control" id="manage-grp-name" type="text"/><button class="btn btn-outline btn-sm" onclick="saveGroupName()">Save</button></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label">Add Member</label>
+          <div style="display:flex;gap:8px;"><select class="form-control" id="manage-grp-add-user"></select><button class="btn btn-gold btn-sm" onclick="addToGroup()"><i class="fas fa-plus"></i></button></div>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Members</label><div id="manage-grp-members"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="leaveGroup()"><i class="fas fa-sign-out-alt"></i> Leave Group</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-manage-group')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-backdrop" id="modal-change-password">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><div><div class="modal-title">Change Password</div></div><button class="modal-close" onclick="closeModal('modal-change-password')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;">
+        <div class="form-group"><label class="form-label">Current Password</label><input class="form-control" id="pwd-current" type="password" onkeydown="if(event.key==='Enter')changePassword()"/></div>
+        <div class="form-group"><label class="form-label">New Password</label><input class="form-control" id="pwd-new" type="password" placeholder="Min. 8 characters" onkeydown="if(event.key==='Enter')changePassword()"/></div>
+        <div class="form-group"><label class="form-label">Confirm New Password</label><input class="form-control" id="pwd-confirm" type="password" onkeydown="if(event.key==='Enter')changePassword()"/></div>
+      </div>
+      <p id="pwd-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-change-password')">Cancel</button>
+      <button class="btn btn-gold" onclick="changePassword()"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-backdrop" id="modal-forgot-password">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header"><div><div class="modal-title">Reset Password</div><div class="modal-sub">We'll send a reset link to your email</div></div><button class="modal-close" onclick="closeModal('modal-forgot-password')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-control" id="forgot-email" type="email" onkeydown="if(event.key==='Enter')forgotPassword()"/>
+      </div>
+      <p id="forgot-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-forgot-password')">Cancel</button>
+      <button class="btn btn-gold" onclick="forgotPassword()"><i class="fas fa-envelope"></i> Send Reset Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- SET NEW PASSWORD (after reset link) -->
+<div class="modal-backdrop" id="modal-set-new-password">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header"><div><div class="modal-title">Set New Password</div></div></div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;">
+        <div class="form-group"><label class="form-label">New Password <span class="required">*</span></label><input class="form-control" id="reset-new-pwd" type="password" placeholder="Min. 8 characters"/></div>
+        <div class="form-group"><label class="form-label">Confirm Password <span class="required">*</span></label><input class="form-control" id="reset-confirm-pwd" type="password"/></div>
+      </div>
+      <p id="reset-pwd-err" style="color:var(--danger);font-size:12px;margin-top:8px;display:none;"></p>
+    </div>
+    <div class="modal-footer"><button class="btn btn-gold w-full" style="justify-content:center;" onclick="setNewPasswordFromReset()"><i class="fas fa-lock"></i> Set Password</button></div>
+  </div>
+</div>
 
 
+<!-- CHANGE PASSWORD MODAL -->
+</div>
+
+<!-- CREATE GROUP MODAL -->
+</div>
+
+<!-- GROUP SETTINGS MODAL -->
+<div class="modal-backdrop" id="modal-group-settings">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div><div class="modal-title">Group Settings</div></div><button class="modal-close" onclick="closeModal('modal-group-settings')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Group Name</label>
+        <div style="display:flex;gap:8px;"><input class="form-control" id="gs-name" type="text"/><button class="btn btn-outline btn-sm" onclick="saveGroupName()"><i class="fas fa-save"></i></button></div>
+      </div>
+      <div class="section-divider">Members</div>
+      <div id="gs-members" style="max-height:200px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;">
+        <select class="form-control" id="gs-add-member"></select>
+        <button class="btn btn-gold btn-sm" onclick="addGroupMember()"><i class="fas fa-plus"></i> Add</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteGroup()" title="Delete group permanently"><i class="fas fa-trash"></i> Delete Group</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-group-settings')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM ROLE MODAL -->
+<div class="modal-backdrop" id="modal-role">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><div><div class="modal-title" id="role-modal-title">New Role</div></div><button class="modal-close" onclick="closeModal('modal-role')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:16px;"><label class="form-label">Role Name <span class="required">*</span></label><input class="form-control" id="role-name-input" type="text" placeholder="e.g. Junior Advocate, Senior Assistant"/></div>
+      <div class="form-group"><label class="form-label">Permissions</label>
+        <div id="role-permissions" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:0 12px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-role')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveCustomRole()"><i class="fas fa-save"></i> Save Role</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
 <script>
-// AUTO-GENERATED by build/build.js — do not edit, do not commit.
-window.__LEXDESK_ENV__ = {
-  SUPABASE_URL: "https://nvojtsmurbvpclwcwrca.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52b2p0c211cmJ2cGNsd2N3cmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1OTYxODgsImV4cCI6MjA5NzE3MjE4OH0.83E5nAY27tX15ClrqwxjmAsPXj3Wx5na9j3Lg24I63E",
-  APP_ENV: "production",
-  APP_VERSION: "1.0.0"
-};
-</script>
-<script>
-// ════════════════════════════════════════════════════════════════════════
-//  SUPABASE CONFIG & CLIENT  —  SaaS edition
-//
-//  Unlike the original single-tenant build, this app does NOT ask each
-//  browser for a Supabase URL/key. There is exactly ONE Supabase project
-//  behind every deployment of this app, injected at build time via
-//  env.js (see build/inject-env.js and docs/SETUP.md). Tenant isolation
-//  is handled entirely by the database (firm_id + RLS), not by which
-//  backend you happen to be pointed at.
-// ════════════════════════════════════════════════════════════════════════
-let sb = null;
+// ════════════════════════════════════════════
+//  SUPABASE CONFIG & CLIENT
+// ════════════════════════════════════════════
+const CFG_KEY='ld_supabase_cfg';
+let sb=null;
+
+function getSupabaseConfig(){ try{return JSON.parse(localStorage.getItem(CFG_KEY)||'null')}catch{return null} }
+
+function saveSupabaseConfig(){
+  const url=(document.getElementById('cfg-url').value||'').trim();
+  const key=(document.getElementById('cfg-key').value||'').trim();
+  if(!url||!key){showToast('Both URL and key are required.','error');return;}
+  localStorage.setItem(CFG_KEY,JSON.stringify({url,key}));
+  location.reload();
+}
+
+function disconnectSupabase(){
+  if(!confirm('Disconnect this browser from the database? You will need to re-enter the URL/key to use the app again.'))return;
+  localStorage.removeItem(CFG_KEY);
+  location.reload();
+}
 
 function initSupabase(){
-  // window.__LEXDESK_ENV__ is injected by build/inject-env.js from your
-  // .env file at deploy time — see docs/SETUP.md "Environment Variables".
-  const env = window.__LEXDESK_ENV__ || {};
-  if(!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY){
-    console.error('LexDesk: missing SUPABASE_URL / SUPABASE_ANON_KEY. Did the build step inject env.js?');
-    document.getElementById('config-error-screen')?.style.removeProperty('display');
-    return false;
-  }
-  sb = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
+  const cfg=getSupabaseConfig();
+  if(!cfg){ document.getElementById('setup-screen').style.display='flex'; return false; }
+  sb=window.supabase.createClient(cfg.url,cfg.key);
+  document.getElementById('setup-screen').style.display='none';
   return true;
 }
 
-// ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════
 //  STATE
-// ════════════════════════════════════════════════════════════════════════
-let S = {
-  user:null, profile:null, firm:null,
+// ════════════════════════════════════════════
+let S={
+  user:null, profile:null,             // current auth user + profile row
   clients:[], users:[], documents:[], templates:[],
   categories:[], formSchemas:{},
   tasks:[], taskComments:{},
-  messages:[], activeChatPeer:null, activeGroupId:null,
+  messages:[], activeChatPeer:null,    // null = team broadcast channel
   editingMessageId:null, messageReadIds:new Set(),
-  chatGroups:[], unreadCounts:{}, locallyReadIds:new Set(), lastSeenTaskTs:'',
+  signupCode:null,
   editingClientId:null, detailClientId:null,
   activeCaseType:null, pendingFiles:[],
   editingTemplateId:null, activeTemplateId:null,
@@ -2036,156 +2028,121 @@ let S = {
   paymentsCache:{},
   deadlineRules:[], invoiceSettings:null,
   editingDeadlineRuleId:null,
-  customRoles:[],
   _editingTemplateVars:[],
-  _portalToken:null, portalData:null,
-  _approvingUserId:null, _managingGroupId:null
+  _portalToken:null, portalData:null
 };
 
-const FIELD_TYPES = ['text','number','date','tel','select','textarea'];
+const FIELD_TYPES=['text','number','date','tel','select','textarea'];
 
-// ════════════════════════════════════════════════════════════════════════
-//  AUTH — two signup paths: "Create a new firm" vs "Join with invite code"
-// ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════
 function showAuthTab(tab){
-  document.getElementById('auth-signin').style.display = tab==='signin' ? 'block' : 'none';
-  document.getElementById('auth-signup').style.display = tab==='signup' ? 'block' : 'none';
-  document.getElementById('tab-signin').classList.toggle('active', tab==='signin');
-  document.getElementById('tab-signup').classList.toggle('active', tab==='signup');
-}
-
-function toggleSignupMode(mode){
-  document.getElementById('su-newfirm-fields').style.display = mode==='new' ? 'block' : 'none';
-  document.getElementById('su-invite-fields').style.display  = mode==='invite' ? 'block' : 'none';
-  document.querySelectorAll('.su-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
-  document.getElementById('su-mode-selected').value = mode;
+  document.getElementById('auth-signin').style.display=tab==='signin'?'block':'none';
+  document.getElementById('auth-signup').style.display=tab==='signup'?'block':'none';
+  document.getElementById('tab-signin').style.background=tab==='signin'?'var(--navy)':'';
+  document.getElementById('tab-signin').style.color=tab==='signin'?'#fff':'';
+  document.getElementById('tab-signup').style.background=tab==='signup'?'var(--navy)':'';
+  document.getElementById('tab-signup').style.color=tab==='signup'?'#fff':'';
 }
 
 async function doSignIn(){
-  const email = (document.getElementById('li-email').value||'').trim();
-  const pwd = document.getElementById('li-pwd').value;
-  const err = document.getElementById('li-err');
-  err.style.display = 'none';
-  if(!email || !pwd){ err.textContent='Enter email and password.'; err.style.display='block'; return; }
-  const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
-  if(error){ err.textContent = error.message; err.style.display = 'block'; return; }
+  const email=(document.getElementById('li-email').value||'').trim();
+  const pwd=document.getElementById('li-pwd').value;
+  const err=document.getElementById('li-err');
+  err.style.display='none';
+  if(!email||!pwd){err.textContent='Enter email and password.';err.style.display='block';return;}
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){err.textContent=error.message;err.style.display='block';return;}
   await afterAuth();
 }
 
 async function doSignUp(){
-  const mode = document.getElementById('su-mode-selected')?.value || 'new';
-  const name = (document.getElementById('su-name').value||'').trim();
-  const email = (document.getElementById('su-email').value||'').trim();
-  const pwd = document.getElementById('su-pwd').value;
-  const err = document.getElementById('su-err');
-  err.style.display = 'none';
+  const name=(document.getElementById('su-name').value||'').trim();
+  const email=(document.getElementById('su-email').value||'').trim();
+  const pwd=document.getElementById('su-pwd').value;
+  const code=(document.getElementById('su-code').value||'').trim();
+  const err=document.getElementById('su-err');
+  err.style.display='none';
+  if(!name||!email||pwd.length<8){err.textContent='Name, email, and a password (8+ chars) are required.';err.style.display='block';return;}
 
-  if(!name || !email || pwd.length < 8){
-    err.textContent = 'Name, email, and a password (8+ characters) are required.';
-    err.style.display = 'block';
-    return;
+  // Check if this is the very first user (becomes admin automatically)
+  const {count}=await sb.from('profiles').select('*',{count:'exact',head:true});
+  const isFirstUser=(count||0)===0;
+
+  if(!isFirstUser){
+    if(!code){err.textContent='A signup code from your admin is required.';err.style.display='block';return;}
+    const {data:codeRow}=await sb.from('signup_codes').select('*').eq('code',code).eq('active',true).maybeSingle();
+    if(!codeRow){err.textContent='Invalid or expired signup code.';err.style.display='block';return;}
   }
 
-  let firmName = '', barCouncilState = '', inviteCode = '';
-  if(mode === 'new'){
-    firmName = (document.getElementById('su-firm-name').value||'').trim();
-    barCouncilState = (document.getElementById('su-bar-state').value||'').trim();
-    if(!firmName){ err.textContent='Firm / chamber name is required.'; err.style.display='block'; return; }
+  const {data,error}=await sb.auth.signUp({email,password:pwd});
+  if(error){err.textContent=error.message;err.style.display='block';return;}
+
+  const userId=data.user?.id;
+  if(!userId){err.textContent='Signup failed — check your email to confirm, then sign in.';err.style.display='block';return;}
+
+  await sb.from('profiles').insert({
+    id:userId, full_name:name, email,
+    role:isFirstUser?'admin':'pending',
+    approved:isFirstUser
+  });
+
+  if(isFirstUser){
+    // Seed a signup code for them right away
+    const newCode=genCode();
+    await sb.from('signup_codes').insert({code:newCode, created_by:userId});
+    showToast('Welcome! You are the Admin.','success');
+    await afterAuth();
   } else {
-    inviteCode = (document.getElementById('su-invite-code').value||'').trim();
-    if(!inviteCode){ err.textContent='An invite code from your firm admin is required.'; err.style.display='block'; return; }
-  }
-
-  const { data, error } = await sb.auth.signUp({ email, password: pwd });
-  if(error){ err.textContent = error.message; err.style.display = 'block'; return; }
-  const userId = data.user?.id;
-  if(!userId){ err.textContent='Signup failed — check your email to confirm, then sign in.'; err.style.display='block'; return; }
-
-  try{
-    if(mode === 'new'){
-      await sb.rpc('create_firm_and_admin', {
-        p_firm_name: firmName, p_full_name: name, p_bar_council_state: barCouncilState || null
-      });
-      showToast(`Welcome to LexDesk! "${firmName}" is set up — you're the admin.`, 'success');
-      await afterAuth();
-    } else {
-      await sb.rpc('join_firm_with_invite', { p_invite_code: inviteCode, p_full_name: name });
-      showToast('Account created — awaiting approval from your firm admin.', 'success');
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('pending-screen').style.display = 'flex';
-    }
-  } catch(rpcErr){
-    err.textContent = 'Account created, but firm setup failed: ' + (rpcErr.message||rpcErr);
-    err.style.display = 'block';
+    showToast('Account created — awaiting admin approval.','success');
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('pending-screen').style.display='flex';
   }
 }
 
 async function afterAuth(){
-  const { data:{ user } } = await sb.auth.getUser();
+  const {data:{user}}=await sb.auth.getUser();
   if(!user){ document.getElementById('login-screen').style.display='flex'; return; }
-  S.user = user;
-
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  S.user=user;
+  const {data:profile}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
   if(!profile){ document.getElementById('login-screen').style.display='flex'; return; }
-
-  if(!profile.approved || profile.archived){
-    S.profile = profile;
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('pending-screen').style.display = 'flex';
+  if(!profile.approved){
+    S.profile=profile;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('pending-screen').style.display='flex';
     return;
   }
-
-  S.profile = profile;
-
-  const { data: firm } = await sb.from('firms').select('*').eq('id', profile.firm_id).maybeSingle();
-  S.firm = firm;
-  if(firm && ['suspended','cancelled'].includes(firm.status)){
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('billing-blocked-screen')?.style.removeProperty('display');
-    return;
-  }
-
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('pending-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-
-  if(typeof applyProfileTheme === 'function') applyProfileTheme(profile);
-  else if(profile.theme_config) applyThemeConfig(profile.theme_config);
-
+  S.profile=profile;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  // Apply the user's saved theme (profile takes precedence over localStorage)
+  if(typeof applyProfileTheme==='function') applyProfileTheme(profile);
+  else if(profile.theme) applyTheme(profile.theme);
   await initApp();
 }
 
 async function doLogout(){
-  if(S.profile && !confirm('Sign out?')) return;
+  if(S.profile && !confirm('Sign out?'))return;
   await sb.auth.signOut();
+  // Clear saved-state markers so the next user isn't affected
   localStorage.removeItem('ld_theme_saved');
-  S = {
-    ...S, user:null, profile:null, firm:null,
-    unreadCounts:{}, locallyReadIds:new Set(), messageReadIds:new Set(),
-    messages:[], lastSeenTaskTs:''
-  };
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('pending-screen').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('li-email').value = '';
-  document.getElementById('li-pwd').value = '';
-  document.getElementById('li-err').style.display = 'none';
+  S={...S, user:null, profile:null,
+     unreadCounts:{}, locallyReadIds:new Set(), messageReadIds:new Set(),
+     messages:[], lastSeenTaskTs:''};
+  document.getElementById('app').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('li-email').value='';
+  document.getElementById('li-pwd').value='';
+  document.getElementById('li-err').style.display='none';
 }
 
-function isAdmin(){ return S.profile?.role === 'admin'; }
-
-// ── File upload helper — ALWAYS namespaces by firm_id, enforced by the
-//    storage RLS policy in database/migrations/004_storage.sql ──────────
-async function uploadFirmFile(file, clientId){
-  const path = `${S.profile.firm_id}/${clientId}/${Date.now()}_${file.name}`;
-  const { error } = await sb.storage.from('lexdesk-files').upload(path, file);
-  if(error) throw error;
-  return path;
-}
-
+function isAdmin(){ return S.profile?.role==='admin'; }
+function genCode(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  DATA LOADING
 // ════════════════════════════════════════════
@@ -2198,7 +2155,7 @@ async function loadAllData(){
     sb.from('documents').select('*').order('uploaded_at',{ascending:false}),
     sb.from('templates').select('*').order('created_at',{ascending:false}),
     sb.from('tasks').select('*').order('created_at',{ascending:false}),
-    isAdmin()?sb.from('firm_invites').select('*').eq('firm_id',S.profile.firm_id).order('created_at',{ascending:false}).limit(1):Promise.resolve({data:[]})
+    isAdmin()?sb.from('signup_codes').select('*').eq('active',true).order('created_at',{ascending:false}).limit(1):Promise.resolve({data:[]})
   ]);
   S.categories=catRes.data||[];
   S.formSchemas={};
@@ -2374,10 +2331,8 @@ function myClients(){
   if(isAdmin()) return S.clients;
   return S.clients.filter(c=>c.assigned_to===S.user?.id);
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  CASE TYPE TABS / DYNAMIC FIELDS
 // ════════════════════════════════════════════
@@ -2538,19 +2493,13 @@ function openNewCategoryModal(){ document.getElementById('nc-name').value='';doc
 async function createCategory(){
   const name=(document.getElementById('nc-name').value||'').trim();
   if(!name){showToast('Category name required.','error');return;}
-  const slug=name.toLowerCase().replace(/[^a-z0-9]/g,'_');
-  if(S.categories.find(c=>c.slug===slug)){showToast('Category already exists.','error');return;}
-  const {data:newCat,error:e1}=await sb.from('categories').insert({
-    firm_id:S.profile.firm_id, slug,
-    label:name,
-    icon:document.getElementById('nc-icon').value||'fas fa-folder',
-    color:document.getElementById('nc-color').value||'blue',
-    built_in:false, created_by:S.user.id
-  }).select().single();
+  const id=name.toLowerCase().replace(/[^a-z0-9]/g,'_');
+  if(S.categories.find(c=>c.id===id)){showToast('Category already exists.','error');return;}
+  const {error:e1}=await sb.from('categories').insert({id,label:name,icon:document.getElementById('nc-icon').value||'fas fa-folder',color:document.getElementById('nc-color').value||'blue',built_in:false,created_by:S.user.id});
   if(e1){showToast('Failed: '+e1.message,'error');return;}
-  const {error:e2}=await sb.from('form_schemas').insert({category_id:newCat.id, firm_id:S.profile.firm_id, fields:[]});
+  const {error:e2}=await sb.from('form_schemas').insert({category_id:id,fields:[]});
   if(e2){showToast('Failed: '+e2.message,'error');return;}
-  S.categories.push(newCat);
+  S.categories.push({id,label:name,icon:document.getElementById('nc-icon').value,color:document.getElementById('nc-color').value,built_in:false});
   S.formSchemas[id]=[];
   closeModal('modal-new-cat');
   buildSidebar();buildCaseTypeTabs();buildCategoryFilter();renderFormBuilder();updateStats();updateTemplateCatDropdown();
@@ -2634,7 +2583,7 @@ async function saveClient(){
   const caseData=readDynamicFields(catId);
 
   const payload={
-    firm_id:S.profile.firm_id, client_id:initialClientId,name,case_type:catId,
+    client_id:initialClientId,name,case_type:catId,
     contact_id:S.editingClientId?undefined:(S.linkedContactId||null),
     phone:document.getElementById('f-phone').value,
     email:document.getElementById('f-email').value,
@@ -2678,7 +2627,7 @@ async function saveClient(){
       attempt++;
     }
     if(lastError){showToast('Save failed: '+lastError.message,'error');saveBtn.disabled=false;return;}
-    sb.from('activity_log').insert({firm_id:S.profile.firm_id,actor_id:S.user.id,action:'client_created',entity_type:'client',entity_id:usedId,detail:{name:payload.name,created_by:S.profile.full_name,case_type:catId}});
+    sb.from('activity_log').insert({actor_id:S.user.id,action:'client_created',entity_type:'client',entity_id:usedId,detail:{name:payload.name,created_by:S.profile.full_name,case_type:catId}});
     showToast(`${usedId} added.`,'success');
   }
   const clientId=payload.client_id;
@@ -2687,11 +2636,11 @@ async function saveClient(){
   if(S.pendingFiles.length){
     for(const f of S.pendingFiles){
       try{
-        const path=`${S.profile.firm_id}/${clientId}/${Date.now()}_${f.name}`;
+        const path=`${clientId}/${Date.now()}_${f.name}`;
         const {error:upErr}=await sb.storage.from('lexdesk-files').upload(path,f._file,{contentType:f.type});
         if(upErr){ showToast(`Upload failed for ${f.name}: ${upErr.message}`,'error'); continue; }
         await sb.from('documents').insert({
-          firm_id:S.profile.firm_id, client_id:clientId,name:f.name,
+          client_id:clientId,name:f.name,
           category:S.categories.find(c=>c.id===catId)?.label||catId,
           size:f.size,mime_type:f.type,storage_path:path,uploaded_by:S.user.id
         });
@@ -2833,10 +2782,8 @@ function renderRelatedCasesHTML(c){
       </div>`;
     }).join('')}</div>`;
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  CLIENT TABLE RENDER
 // ════════════════════════════════════════════
@@ -3108,15 +3055,13 @@ function copySignupCode(){
   navigator.clipboard.writeText(S.signupCode).then(()=>showToast('Code copied!','success'));
 }
 async function regenerateSignupCode(){
-  if(!confirm('Generate a new invite code? The old one will stop working.'))return;
+  if(!confirm('Generate a new code? The old one will stop working.'))return;
   const newCode=genCode();
-  const {error:insErr}=await sb.from('firm_invites').insert({
-    firm_id:S.profile.firm_id, code:newCode, role:'assistant', created_by:S.user.id
-  });
+  const {error:insErr}=await sb.from('signup_codes').insert({code:newCode,created_by:S.user.id});
   if(insErr){showToast('Could not generate new code: '+insErr.message,'error');return;}
   if(S.signupCode){
-    const {error:delErr}=await sb.from('firm_invites').delete().eq('firm_id',S.profile.firm_id).eq('code',S.signupCode);
-    if(delErr) console.warn('Old invite could not be removed:',delErr.message);
+    const {error:deactErr}=await sb.from('signup_codes').update({active:false}).eq('code',S.signupCode);
+    if(deactErr) console.warn('Old code could not be deactivated:',deactErr.message);
   }
   S.signupCode=newCode;
   renderUsers();
@@ -3291,10 +3236,8 @@ function showUserClients(userId){
   document.getElementById('topbar-title').textContent=`${u?.full_name||'User'}'s Clients`;
   renderClientTable();
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  CHAT / MESSAGING
 // ════════════════════════════════════════════
@@ -3477,10 +3420,10 @@ async function sendChatMessage(){
   }
 
   if(!body&&!S.pendingChatFile)return;
-  const payload={firm_id:S.profile.firm_id,sender_id:S.user.id,recipient_id:S.activeChatPeer,body:body||null};
+  const payload={sender_id:S.user.id,recipient_id:S.activeChatPeer,body:body||null};
   if(S.pendingChatFile){
     const f=S.pendingChatFile;
-    const path=`${S.profile.firm_id}/chat/${Date.now()}_${f.name}`;
+    const path=`chat/${Date.now()}_${f.name}`;
     const {error:upErr}=await sb.storage.from('lexdesk-files').upload(path,f,{contentType:f.type});
     if(upErr){showToast('Attachment upload failed: '+upErr.message,'error');return;}
     payload.attachment_path=path;
@@ -3493,10 +3436,8 @@ async function sendChatMessage(){
   await loadMessages();
   renderChatMessages();
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  TASKS / KANBAN
 // ════════════════════════════════════════════
@@ -3665,7 +3606,6 @@ async function saveTask(){
   }
 
   const payload={
-    firm_id:     S.profile.firm_id,
     title,
     description: document.getElementById('task-desc').value,
     client_id:   document.getElementById('task-client').value||null,
@@ -3754,7 +3694,7 @@ async function addTaskComment(){
   const body=(input.value||'').trim();
   if(!body||!S.editingTaskId)return;
   const {error}=await sb.from('task_comments')
-    .insert({firm_id:S.profile.firm_id, task_id:S.editingTaskId, author_id:S.user.id, body});
+    .insert({task_id:S.editingTaskId, author_id:S.user.id, body});
   if(error){showToast('Failed: '+error.message,'error');return;}
   input.value='';
   renderTaskComments(S.editingTaskId);
@@ -3799,10 +3739,8 @@ function renderTasks(){
       : '<p class="text-muted text-sm" style="padding:8px 4px;">Empty</p>';
   });
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  TEMPLATES
 // ════════════════════════════════════════════
@@ -3833,7 +3771,7 @@ async function saveTemplate(){
   const name=(document.getElementById('tpl-name').value||'').trim();
   const content=document.getElementById('tpl-content').innerHTML;
   if(!name||!content.trim()){showToast('Name and content are required.','error');return;}
-  const payload={firm_id:S.profile.firm_id,name,category:document.getElementById('tpl-category').value||null,content,updated_at:new Date().toISOString()};
+  const payload={name,category:document.getElementById('tpl-category').value||null,content,updated_at:new Date().toISOString()};
   if(S.editingTemplateId){
     const {error}=await sb.from('templates').update(payload).eq('id',S.editingTemplateId);
     if(error){showToast('Failed: '+error.message,'error');return;}
@@ -4000,33 +3938,52 @@ function loadSettingsUI(){
   if(typeof renderThemeCustomiser==='function') renderThemeCustomiser();
   const resetRow=document.getElementById('reset-row');
   if(resetRow) resetRow.style.display=isAdmin()?'flex':'none';
-  const planRow=document.getElementById('firm-plan-row');
-  if(planRow && isAdmin()){
-    planRow.style.display='flex';
-    const planDesc=document.getElementById('firm-plan-desc');
-    if(planDesc && S.firm){
-      const planLabel=(S.firm.plan||'trial').charAt(0).toUpperCase()+(S.firm.plan||'trial').slice(1);
-      const seatInfo=`${S.users.length}/${S.firm.plan_seats} seats used`;
-      const trialInfo=S.firm.plan==='trial' && S.firm.trial_ends_at
-        ? ` · Trial ends ${new Date(S.firm.trial_ends_at).toLocaleDateString()}`
-        : '';
-      planDesc.textContent=`${planLabel} plan · ${seatInfo}${trialInfo}`;
-    }
-  }
+  const migRow=document.getElementById('migration-check-row');
+  if(migRow){ migRow.style.display=isAdmin()?'flex':'none'; if(isAdmin()) checkMigrationStatus(); }
 }
 
 // Diagnoses whether the v3.1 SQL migration has actually been run on this
 // Supabase project. Checks the two concrete symptoms reported: the profiles
 // visibility policy (chat contact list) and the tasks status constraint
 // (in_review). Admin-only, surfaced on the Settings page.
-// NOTE: the old single-tenant build had a checkMigrationStatus() probe here
-// to detect whether a customer had manually applied a SQL migration to
-// their own Supabase project. In the multi-tenant SaaS model there is
-// exactly one shared schema (see database/migrations/) that every firm
-// runs against — there's no per-firm migration drift to detect, so this
-// function has been removed. Firm-level health (trial expiry, plan
-// status, seat limits) is now surfaced via S.firm — see
-// src/js/01-supabase-config.js afterAuth().
+async function checkMigrationStatus(){
+  const descEl=document.getElementById('migration-check-desc');
+  if(!descEl)return;
+  descEl.textContent='Checking…';
+  const issues=[];
+
+  // Check 1: can we see other approved profiles? (fails if old RLS policy is still active)
+  try{
+    const {data,error}=await sb.from('profiles').select('id').eq('approved',true).limit(50);
+    if(error){ issues.push('profile visibility check failed: '+error.message); }
+    else if((data||[]).length<=1 && S.users.length<=1){ issues.push('team members are still hidden from each other (old profiles policy is still active)'); }
+  }catch(e){ issues.push('profile visibility check threw an error'); }
+
+  // Check 2: does the tasks table actually accept 'in_review'? We test this directly
+  // with a real insert + immediate delete, using a harmless throwaway row, so the
+  // result reflects the live constraint rather than a proxy.
+  try{
+    const probeTitle='__lexdesk_migration_probe__';
+    const {data:inserted,error:insErr}=await sb.from('tasks').insert({
+      title:probeTitle, status:'in_review', assigned_by:S.user.id, assigned_to:S.user.id
+    }).select('id').single();
+    if(insErr){
+      if(/check constraint|tasks_status_check/i.test(insErr.message)){
+        issues.push("tasks table doesn't accept 'in_review' yet (old status constraint is still active)");
+      } else {
+        issues.push('tasks constraint check failed: '+insErr.message);
+      }
+    } else if(inserted?.id){
+      await sb.from('tasks').delete().eq('id',inserted.id);
+    }
+  }catch(e){ issues.push('tasks constraint check threw an error'); }
+
+  if(!issues.length){
+    descEl.innerHTML='<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Migration fully applied</span>';
+  } else {
+    descEl.innerHTML=`<span style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Migration NOT applied: ${issues.map(escHtml).join('; ')}. Run the MIGRATION block in supabase_schema.sql.</span>`;
+  }
+}
 async function saveProfile(){
   const payload={full_name:document.getElementById('s-name').value,bar_number:document.getElementById('s-bar').value,phone:document.getElementById('s-phone').value,court:document.getElementById('s-court').value,dob:document.getElementById('s-dob')?.value||null};
   const {error}=await sb.from('profiles').update(payload).eq('id',S.user.id);
@@ -4047,10 +4004,8 @@ function updateSyncStatus(state,text){
   dot.className='sync-dot'+(state==='syncing'?' syncing':state==='offline'?' offline':'');
   txt.textContent=text;
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  FEE LEDGER (Payments) — multiple dated entries per case,
 //  with a running balance against the quoted Total Fee.
@@ -4125,7 +4080,7 @@ async function savePayment(){
   if(!amount||amount<=0){showToast('Enter a valid amount greater than zero.','error');return;}
   if(!date){showToast('Payment date is required.','error');return;}
   const payload={
-    firm_id:S.profile.firm_id, client_id:clientId,amount,payment_date:date,
+    client_id:clientId,amount,payment_date:date,
     method:document.getElementById('pay-method').value,
     note:document.getElementById('pay-note').value||null,
     recorded_by:S.user.id
@@ -4155,10 +4110,8 @@ async function deletePayment(paymentId,clientId){
   showToast('Payment entry removed.','warning');
   await renderPaymentsTab(clientId);
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  DAILY PLANNER — monthly grid + day detail panel
 //  BUG FIX: all dates use local time (no toISOString/UTC)
@@ -4362,7 +4315,7 @@ async function calAddNote(){
   const content=(input.value||'').trim();
   if(!content)return;
   const {error}=await sb.from('planner_notes').insert({
-    firm_id:S.profile.firm_id, owner_id:S.user.id, note_date:S.plannerDate,
+    owner_id:S.user.id, note_date:S.plannerDate,
     time:timeInput.value||null, content
   });
   if(error){showToast('Could not add: '+error.message,'error');return;}
@@ -4385,10 +4338,8 @@ async function deletePlannerNote(id){
 // Legacy compat stubs (old HTML may call these)
 async function addPlannerNote(){ await calAddNote(); }
 async function loadPlannerNotes(){ await renderPlannerDayPanel(S.plannerDate); }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  ONEDRIVE SYNC (Microsoft Graph, personal OneDrive)
 //  Uses the OAuth 2.0 implicit flow against Microsoft's "consumers"
@@ -4490,10 +4441,8 @@ async function oneDriveGetFileLink(path){
   const data=await res.json();
   return data.webUrl||null;
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  NOTIFICATIONS + REAL-TIME UPDATES
 // ════════════════════════════════════════════
@@ -4790,10 +4739,8 @@ function startPolling(){
     }
   }, 5000);
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  NOTES — private rich-text documents, shareable with
 //  viewer/editor permissions per person, with full history.
@@ -4918,7 +4865,7 @@ async function saveNote(){
       });
       // Log to activity_log
       await sb.from('activity_log').insert({
-        firm_id:S.profile.firm_id, actor_id:S.user.id, action:'note_edited',
+        actor_id:S.user.id, action:'note_edited',
         entity_type:'note', entity_id:S.editingNoteId,
         detail:{title}
       });
@@ -4929,12 +4876,12 @@ async function saveNote(){
     showToast('Note saved.','success');
   } else {
     const {data,error}=await sb.from('notes')
-      .insert({firm_id:S.profile.firm_id,owner_id:S.user.id,title,content}).select().single();
+      .insert({owner_id:S.user.id,title,content}).select().single();
     if(error){ showToast('Create failed: '+error.message,'error'); return; }
     S.editingNoteId=data.id;
     showToast('Note created.','success');
     await sb.from('activity_log').insert({
-      firm_id:S.profile.firm_id, actor_id:S.user.id, action:'note_created',
+      actor_id:S.user.id, action:'note_created',
       entity_type:'note', entity_id:data.id, detail:{title}
     });
   }
@@ -5000,7 +4947,7 @@ async function addNoteShare(){
   );
   if(error){ showToast('Share failed: '+error.message,'error'); return; }
   await sb.from('activity_log').insert({
-    firm_id:S.profile.firm_id, actor_id:S.user.id, action:'note_shared',
+    actor_id:S.user.id, action:'note_shared',
     entity_type:'note', entity_id:noteId,
     detail:{shared_with:userId, permission:perm}
   });
@@ -5012,7 +4959,7 @@ async function addNoteShare(){
     const n=S.notes.find(x=>x.id===noteId);
     const body=`📝 Shared a note with you: "${n?.title||'Note'}" (${perm} access)`;
     await sb.from('messages').insert({
-      firm_id:S.profile.firm_id, sender_id:S.user.id, recipient_id:userId, body, note_id:noteId
+      sender_id:S.user.id, recipient_id:userId, body, note_id:noteId
     });
     showToast('Also sent as a chat message.','success');
   }
@@ -5023,7 +4970,7 @@ async function updateSharePermission(noteId,userId,perm){
     .update({permission:perm}).eq('note_id',noteId).eq('shared_with',userId);
   if(error){ showToast('Update failed: '+error.message,'error'); return; }
   await sb.from('activity_log').insert({
-    firm_id:S.profile.firm_id, actor_id:S.user.id, action:'note_permission_changed',
+    actor_id:S.user.id, action:'note_permission_changed',
     entity_type:'note', entity_id:noteId,
     detail:{shared_with:userId, new_permission:perm}
   });
@@ -5065,10 +5012,8 @@ async function loadActivityLog(){
 
 // Rich text helpers for the note editor
 function noteCmd(cmd){ document.execCommand(cmd,false,null); document.getElementById('note-content-editor').focus(); }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  FINANCES — firm-wide fee tracker
 // ════════════════════════════════════════════
@@ -5270,10 +5215,8 @@ async function finDeletePayment(paymentId, clientId){
   const statusF = document.getElementById('fin-filter-status')?.value||'';
   renderFinancesFromCache(search, statusF);
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  CLIENT PORTAL  (magic link + PIN)
 //  The portal is a separate mode that renders on top of everything
@@ -5459,10 +5402,8 @@ function copyPortalLink(){
   const pin = document.getElementById('portal-link-pin').textContent;
   navigator.clipboard.writeText(`Portal Link: ${url}\nPIN: ${pin}`).then(()=>showToast('Link and PIN copied!','success'));
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  INVOICE GENERATION  (jsPDF, browser-only)
 //  Generates a professional PDF invoice from
@@ -5596,20 +5537,15 @@ async function generateInvoice(clientId){
   setTimeout(()=>win.print(), 600);
 
   // Increment invoice number in DB (fire and forget)
-  if(S.invoiceSettings){
-    sb.from('invoice_settings').update({next_number:(firm.next_number||1)+1}).eq('firm_id',S.profile.firm_id);
+  if(S.invoiceSettings?.id){
+    sb.from('invoice_settings').update({next_number:(firm.next_number||1)+1}).eq('id',S.invoiceSettings.id);
     if(S.invoiceSettings) S.invoiceSettings.next_number = (firm.next_number||1)+1;
   }
 }
 
 // ── Invoice settings save (in Settings page) ─────────────────────────────
-// invoice_settings has firm_id as its actual primary key (one row per
-// firm, created automatically by create_firm_and_admin() at signup), so
-// this is always an upsert keyed on firm_id rather than an insert/update
-// branch keyed on a separate id column.
 async function saveInvoiceSettings(){
   const payload = {
-    firm_id:        S.profile.firm_id,
     firm_name:      document.getElementById('inv-firm-name')?.value||'Law Firm',
     firm_address:   document.getElementById('inv-firm-address')?.value||null,
     firm_phone:     document.getElementById('inv-firm-phone')?.value||null,
@@ -5619,9 +5555,14 @@ async function saveInvoiceSettings(){
     invoice_prefix: document.getElementById('inv-prefix')?.value||'INV',
     updated_at:     new Date().toISOString()
   };
-  const {data,error}=await sb.from('invoice_settings').upsert(payload,{onConflict:'firm_id'}).select().single();
-  if(error){showToast('Save failed: '+error.message,'error');return;}
-  S.invoiceSettings=data;
+  if(S.invoiceSettings?.id){
+    const {error}=await sb.from('invoice_settings').update(payload).eq('id',S.invoiceSettings.id);
+    if(error){showToast('Save failed: '+error.message,'error');return;}
+  } else {
+    const {data,error}=await sb.from('invoice_settings').insert(payload).select().single();
+    if(error){showToast('Save failed: '+error.message,'error');return;}
+    S.invoiceSettings=data;
+  }
   showToast('Invoice settings saved.','success');
 }
 
@@ -5634,10 +5575,8 @@ function loadInvoiceSettingsUI(){
     if(el) el.value=f[fk]||'';
   });
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  COURT FILING DEADLINE CALCULATOR
 //  Admin-editable rules; auto-computes deadlines
@@ -5795,7 +5734,6 @@ async function saveDeadlineRule(){
   const name=(document.getElementById('dr-name').value||'').trim();
   if(!name){showToast('Rule name is required.','error');return;}
   const payload={
-    firm_id:        S.profile.firm_id,
     rule_name:      name,
     statute:        document.getElementById('dr-statute').value||null,
     category_id:    document.getElementById('dr-category').value||null,
@@ -5831,10 +5769,8 @@ async function deleteDeadlineRule(id){
   await loadDeadlineRules(); renderDeadlineRulesPage();
   showToast('Rule deleted.','warning');
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  CONFLICT OF INTEREST CHECKER
 //  Checks if an opposite party name matches
@@ -5898,7 +5834,6 @@ function buildClientDiff(oldClient, newPayload){
 async function logClientUpdate(clientId, diffs){
   if(!diffs.length) return;
   await sb.from('activity_log').insert({
-    firm_id:  S.profile.firm_id,
     actor_id: S.user.id,
     action:   'client_updated',
     entity_type:'client',
@@ -5995,10 +5930,8 @@ function renderTemplateVarEditor(){
         <i class="fas fa-times"></i></button>
     </div>`).join('');
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  CUSTOM ROLES & PERMISSIONS
 //  Admin-defined role hierarchy. Every non-admin
@@ -6098,7 +6031,7 @@ async function saveCustomRole(){
   Object.keys(PERMISSION_LABELS).forEach(key=>{
     perms[key]=document.getElementById(`perm-${key}`)?.checked||false;
   });
-  const payload={firm_id:S.profile.firm_id, name, permissions:perms};
+  const payload={name, permissions:perms};
   if(S._editingRoleId){
     const {error}=await sb.from('custom_roles').update(payload).eq('id',S._editingRoleId);
     if(error){showToast('Save failed: '+error.message,'error');return;}
@@ -6139,10 +6072,8 @@ function applyPermissionVisibility(){
   const exportRow=document.getElementById('export-row');
   if(exportRow) exportRow.style.display=canExport()?'flex':'none';
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  GROUP CHAT
 //  Groups have admins (creator + Senior Advocate)
@@ -6313,10 +6244,10 @@ window.sendChatMessage=async function(){
     return;
   }
   if(!body&&!S.pendingChatFile)return;
-  const payload={firm_id:S.profile.firm_id,sender_id:S.user.id,recipient_id:S.activeChatPeer,body:body||null};
+  const payload={sender_id:S.user.id,recipient_id:S.activeChatPeer,body:body||null};
   if(S.pendingChatFile){
     const f=S.pendingChatFile;
-    const path=`${S.profile.firm_id}/chat/${Date.now()}_${f.name}`;
+    const path=`chat/${Date.now()}_${f.name}`;
     const {error:upErr}=await sb.storage.from('lexdesk-files').upload(path,f,{contentType:f.type});
     if(upErr){showToast('Attachment upload failed: '+upErr.message,'error');return;}
     payload.attachment_path=path;
@@ -6354,7 +6285,7 @@ async function createGroup(){
 
   // Create group
   const {data:group,error}=await sb.from('chat_groups')
-    .insert({firm_id:S.profile.firm_id,name,created_by:S.user.id}).select().single();
+    .insert({name,created_by:S.user.id}).select().single();
   if(error){showToast('Create failed: '+error.message,'error');return;}
 
   // Add members: creator = admin, Senior Advocate (any admin profile) = admin, rest = members
@@ -6453,10 +6384,10 @@ async function sendGroupMessage(){
   const input=document.getElementById('chat-text-input');
   const body=(input.value||'').trim();
   if(!body&&!S.pendingChatFile) return;
-  const payload={firm_id:S.profile.firm_id,sender_id:S.user.id,group_id:groupId,recipient_id:null,body:body||null};
+  const payload={sender_id:S.user.id,group_id:groupId,recipient_id:null,body:body||null};
   if(S.pendingChatFile){
     const f=S.pendingChatFile;
-    const path=`${S.profile.firm_id}/chat/${Date.now()}_${f.name}`;
+    const path=`chat/${Date.now()}_${f.name}`;
     const {error:upErr}=await sb.storage.from('lexdesk-files').upload(path,f,{contentType:f.type});
     if(upErr){showToast('Upload failed: '+upErr.message,'error');return;}
     payload.attachment_path=path; payload.attachment_name=f.name;
@@ -6521,7 +6452,7 @@ async function addToGroup(){
   const groupId=S.activeChatGroup;
   const uid=document.getElementById('manage-grp-add-user')?.value;
   if(!groupId||!uid) return;
-  const {error}=await sb.from('group_members').insert({group_id:groupId,user_id:uid,is_admin:false});
+  const {error}=await sb.from('chat_group_members').insert({group_id:groupId,user_id:uid,is_admin:false});
   if(error){showToast('Failed: '+error.message,'error');return;}
   await openManageGroupModal();
   showToast('Member added.','success');
@@ -6529,7 +6460,7 @@ async function addToGroup(){
 
 async function removeFromGroup(groupId,uid){
   if(!confirm('Remove this member from the group?')) return;
-  await sb.from('group_members').delete().eq('group_id',groupId).eq('user_id',uid);
+  await sb.from('chat_group_members').delete().eq('group_id',groupId).eq('user_id',uid);
   await openManageGroupModal();
   showToast('Member removed.','warning');
 }
@@ -6537,7 +6468,7 @@ async function removeFromGroup(groupId,uid){
 async function leaveGroup(){
   const groupId=S.activeChatGroup;
   if(!groupId||!confirm('Leave this group?')) return;
-  await sb.from('group_members').delete().eq('group_id',groupId).eq('user_id',S.user.id);
+  await sb.from('chat_group_members').delete().eq('group_id',groupId).eq('user_id',S.user.id);
   S.activeChatGroup=null;
   await loadChatGroups(); renderChatContacts();
   closeModal('modal-manage-group');
@@ -6548,10 +6479,8 @@ async function leaveGroup(){
 
 // ── Build create group modal member list ─────────────────────────────────
 
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  MISC FEATURES — password, user management,
 //  archive/restore, task cleanup, group helpers
@@ -6667,10 +6596,8 @@ async function deleteGroup(){
   renderChatContacts();
   showToast('Group deleted.','warning');
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  LEXDESK ASSISTANT — Deep Indian Law + System Help
 //  Conversational chat UI, no API key.
@@ -7324,10 +7251,7 @@ function botAnswer(cat,idx){
   },400+Math.random()*300);
 }
 
-
-</script>
-<script>
-
+</script><script>
 // ══════════════════════════════════════════════════════
 //  LEXDESK THEME SYSTEM  v2
 //  Users pick: base mode + backdrop + glass tint + contrast
@@ -7653,10 +7577,8 @@ function themeReset(){
   renderThemeCustomiser();
   showToast('Theme reset to default.','info');
 }
-
 </script>
 <script>
-
 // ════════════════════════════════════════════
 //  HELPERS
 // ════════════════════════════════════════════
@@ -7730,8 +7652,6 @@ window.addEventListener('DOMContentLoaded',async ()=>{
   window.addEventListener('online',()=>updateSyncStatus('synced','Live'));
   window.addEventListener('offline',()=>updateSyncStatus('offline','Offline'));
 });
-
 </script>
-
 </body>
 </html>
