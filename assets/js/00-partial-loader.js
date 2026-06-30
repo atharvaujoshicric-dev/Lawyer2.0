@@ -22,7 +22,7 @@
   // lives in, not against window.location. This matters because GitHub
   // Pages project sites serve from a subpath (e.g.
   // https://username.github.io/repo-name/), and a path like
-  // 'partials/_app-shell.html' written as if relative to the domain root
+  // 'partials/app-shell.html' written as if relative to the domain root
   // will 404 there. document.currentScript gives us the actual script
   // tag, so we can compute the correct base no matter how deep the repo
   // is nested or what subpath it's served from.
@@ -44,7 +44,7 @@
   ].map(resolvePath);
 
   // The #app shell itself (sidebar + topbar + empty #page container)
-  const SHELL = resolvePath('partials/_app-shell.html');
+  const SHELL = resolvePath('partials/app-shell.html');
 
   // Every view that gets injected into #page inside the shell. Order here
   // doesn't affect anything since each view is a div the JS shows/hides
@@ -108,7 +108,7 @@
     const shellContainer = document.createElement('div');
     shellContainer.innerHTML = shellHtml;
     if (!shellContainer.firstElementChild) {
-      throw new Error(`partials/_app-shell.html fetched successfully but did not parse into any element — check the file isn't empty or malformed.`);
+      throw new Error(`partials/app-shell.html fetched successfully but did not parse into any element — check the file isn't empty or malformed.`);
     }
     document.body.appendChild(shellContainer.firstElementChild);
 
@@ -116,7 +116,7 @@
     if (pageEl) {
       pageEl.innerHTML = viewsHtml;
     } else {
-      throw new Error('#page container not found after shell injection — check partials/_app-shell.html contains <div id="page">.');
+      throw new Error('#page container not found after shell injection — check partials/app-shell.html contains <div id="page">.');
     }
 
     // Inject modals directly into body

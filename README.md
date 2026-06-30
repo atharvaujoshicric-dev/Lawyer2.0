@@ -41,7 +41,7 @@ This means:
 ```
 .
 ├── index.html                  Thin shell — loads CSS/JS, the partial loader fetches the rest
-├── .nojekyll                   Tells GitHub Pages not to run Jekyll (which would mangle _app-shell.html)
+├── .nojekyll                   Disables GitHub Pages' Jekyll processor — good practice generally; see GITHUB_PAGES_SETUP.txt for the drag-and-drop gotcha this avoids
 │
 ├── assets/
 │   ├── css/
@@ -53,7 +53,7 @@ This means:
 │       └── README.md           What each numbered module owns
 │
 ├── partials/
-│   ├── _app-shell.html         Sidebar + topbar + empty #page container
+│   ├── app-shell.html         Sidebar + topbar + empty #page container
 │   ├── views/                  One file per screen: login, dashboard, clients, tasks, etc.
 │   └── modals/                 One file per modal dialog
 │
@@ -131,6 +131,10 @@ client-side JavaScript does or doesn't check.
 ---
 
 ## Documentation index
+
+- **[GITHUB_PAGES_SETUP.txt](GITHUB_PAGES_SETUP.txt)** — step-by-step
+  guide for deploying via GitHub's web drag-and-drop uploader (no
+  command line / git required)
 
 - **[docs/SETUP.md](docs/SETUP.md)** — provisioning a Supabase project
   and applying the database schema

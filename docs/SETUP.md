@@ -161,11 +161,14 @@ python3 -m http.server 8080
    redeploys automatically — there is no separate build/deploy command
    to run.
 
-The `.nojekyll` file at the repo root is important — without it, GitHub
-Pages runs your site through Jekyll, which treats any file or folder
-starting with an underscore (like `partials/_app-shell.html`) as a
-special Jekyll include and won't serve it as a plain static file. Don't
-delete `.nojekyll`.
+The `.nojekyll` file at the repo root matters even though no file in
+this project currently starts with an underscore — without it, GitHub
+Pages runs your site through Jekyll, which has a number of other
+default exclusions (any folder or file starting with `_` or `.`, among
+others) that could silently break a future file you add. It's an empty
+file; don't delete it, and if you're uploading via drag-and-drop in a
+browser, see `GITHUB_PAGES_SETUP.txt` for a common pitfall where file
+managers hide dot-files from drag operations by default.
 
 ### Custom domain (optional)
 
