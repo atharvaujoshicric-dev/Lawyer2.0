@@ -18,6 +18,21 @@
 (function () {
   'use strict';
 
+  // Resolve every partial path against the directory this script itself
+  // lives in, not against window.location. This matters because GitHub
+  // Pages project sites serve from a subpath (e.g.
+  // https://username.github.io/repo-name/), and a path like
+  // 'partials/_app-shell.html' written as if relative to the domain root
+  // will 404 there. document.currentScript gives us the actual script
+  // tag, so we can compute the correct base no matter how deep the repo
+  // is nested or what subpath it's served from.
+  const SELF_SRC = document.currentScript ? document.currentScript.src : '';
+  const BASE = SELF_SRC ? SELF_SRC.replace(/assets\/js\/[^/]+$/, '') : './';
+
+  function resolvePath(relativePath){
+    return BASE + relativePath;
+  }
+
   // Screens that exist outside the main #app shell (rendered directly
   // into <body>, before the shell). Order doesn't matter for these.
   const SCREENS = [
@@ -26,10 +41,10 @@
     'partials/views/screen-pending.html',
     'partials/views/screen-portal.html',
     'partials/views/screen-portal-view.html'
-  ];
+  ].map(resolvePath);
 
   // The #app shell itself (sidebar + topbar + empty #page container)
-  const SHELL = 'partials/_app-shell.html';
+  const SHELL = resolvePath('partials/_app-shell.html');
 
   // Every view that gets injected into #page inside the shell. Order here
   // doesn't affect anything since each view is a div the JS shows/hides
@@ -39,7 +54,7 @@
     'view-notes', 'view-activity', 'view-roles', 'view-deadline-rules',
     'view-finances', 'view-documents', 'view-templates', 'view-chat',
     'view-tasks', 'view-users', 'view-formbuilder', 'view-settings'
-  ].map(v => `partials/views/${v}.html`);
+  ].map(v => resolvePath(`partials/views/${v}.html`));
 
   // Every modal dialog — fetched dynamically by listing the directory
   // isn't possible from a static host, so this is an explicit list.
@@ -51,13 +66,20 @@
     'modal-deadline-rule', 'modal-create-group', 'modal-manage-group',
     'modal-change-password', 'modal-forgot-password', 'modal-set-new-password',
     'modal-group-settings', 'modal-role'
-  ].map(m => `partials/modals/${m}.html`);
+  ].map(m => resolvePath(`partials/modals/${m}.html`));
 
+  // Fetches one fragment. Throws (instead of silently returning a
+  // placeholder comment) so a missing/404 file produces a clear, specific
+  // error message rather than a confusing downstream DOM crash.
   async function fetchText(path) {
-    const res = await fetch(path, { cache: 'no-cache' });
+    let res;
+    try {
+      res = await fetch(path, { cache: 'no-cache' });
+    } catch (networkErr) {
+      throw new Error(`Network error fetching ${path}: ${networkErr.message}`);
+    }
     if (!res.ok) {
-      console.error(`LexDesk: failed to load partial ${path} (${res.status})`);
-      return `<!-- failed to load ${path} -->`;
+      throw new Error(`HTTP ${res.status} fetching ${path} — check the file exists at that exact path on your deployed site.`);
     }
     return res.text();
   }
@@ -85,13 +107,16 @@
     // Inject the shell, then inject views into its #page container
     const shellContainer = document.createElement('div');
     shellContainer.innerHTML = shellHtml;
+    if (!shellContainer.firstElementChild) {
+      throw new Error(`partials/_app-shell.html fetched successfully but did not parse into any element — check the file isn't empty or malformed.`);
+    }
     document.body.appendChild(shellContainer.firstElementChild);
 
     const pageEl = document.getElementById('page');
     if (pageEl) {
       pageEl.innerHTML = viewsHtml;
     } else {
-      console.error('LexDesk: #page container not found after shell injection — check partials/_app-shell.html');
+      throw new Error('#page container not found after shell injection — check partials/_app-shell.html contains <div id="page">.');
     }
 
     // Inject modals directly into body
@@ -104,15 +129,20 @@
   // Expose a promise the rest of the app can await before booting.
   window.__lexdeskPartialsReady = loadEverything().catch(err => {
     console.error('LexDesk: fatal error loading partials', err);
+    const isLocalFile = window.location.protocol === 'file:';
     document.body.innerHTML = `
-      <div style="padding:40px;font-family:sans-serif;color:#f87171;max-width:600px;margin:60px auto;">
+      <div style="padding:40px;font-family:sans-serif;color:#f87171;max-width:640px;margin:60px auto;">
         <h2>Failed to load LexDesk</h2>
-        <p>A required page fragment could not be fetched. If you're testing
-        locally, this usually means you opened index.html directly with
-        file:// — browsers block fetch() for local files. Run a local
-        server instead (e.g. <code>python3 -m http.server</code>) or test
-        on the deployed GitHub Pages URL.</p>
-        <p style="color:#888;font-size:13px;">${err && err.message ? err.message : err}</p>
+        <p style="color:#ddd;">${(err && err.message) ? err.message : String(err)}</p>
+        ${isLocalFile ? `
+        <p style="color:#aaa;">You opened this file directly via <code>file://</code> — browsers block
+        <code>fetch()</code> for local files. Run a local server instead:
+        <code>python3 -m http.server 8080</code> then open
+        <code>http://localhost:8080</code>.</p>` : `
+        <p style="color:#aaa;">If this is happening on your deployed GitHub Pages site, double-check:
+        the <code>partials/</code> folder was actually pushed and committed, GitHub Pages is set to
+        deploy from the correct branch and the repo root, and there's no typo in the filename the
+        error above is pointing at.</p>`}
       </div>`;
     throw err;
   });
