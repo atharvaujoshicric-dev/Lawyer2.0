@@ -1,0 +1,26 @@
+<div class="page-view" id="view-chat">
+        <div class="chat-layout">
+          <div style="display:flex;flex-direction:column;width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg);">
+            <div class="chat-sidebar" id="chat-contact-list" style="flex:1;overflow-y:auto;border-right:none;width:100%;"></div>
+            <div style="padding:10px 12px;border-top:1px solid var(--border);">
+              <button class="btn btn-outline btn-sm w-full" style="justify-content:center;font-size:12px;" onclick="openCreateGroupModal()">
+                <i class="fas fa-users" style="margin-right:6px;"></i> New Group
+              </button>
+            </div>
+          </div>
+          <div class="chat-main">
+            <div class="chat-header" id="chat-header-title">Team Channel</div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-bar">
+              <button class="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="Attach file"><i class="fas fa-paperclip"></i></button>
+              <input type="file" id="chat-file-input" style="display:none;" onchange="handleChatFileSelect(event)"/>
+              <input type="text" id="chat-text-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendChatMessage()"/>
+              <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fas fa-paper-plane" id="chat-send-btn-icon"></i></button>
+            </div>
+            <div id="chat-pending-file" style="display:none;padding:8px 14px;background:var(--bg);border-top:1px solid var(--border);font-size:12.5px;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-paperclip"></i><span id="chat-pending-file-name"></span>
+              <button class="file-item-remove" onclick="clearChatPendingFile()" style="margin-left:auto;"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+        </div>
+      </div

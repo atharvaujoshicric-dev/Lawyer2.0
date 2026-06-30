@@ -1,0 +1,24 @@
+<div class="page-view" id="view-users">
+        <div id="users-hierarchy-strip"></div>
+        <div class="card mb-4">
+          <div class="card-header"><span class="card-title">Signup Code</span></div>
+          <div class="card-body">
+            <p class="text-sm text-muted mb-3">Share this code with assistant lawyers so they can create their own account. After they sign up, approve them and assign their role below.</p>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <code id="signup-code-display" style="background:var(--bg);padding:8px 14px;border-radius:6px;font-size:14px;font-weight:600;letter-spacing:1px;border:1px solid var(--border);">—</code>
+              <button class="btn btn-outline btn-sm" onclick="copySignupCode()"><i class="fas fa-copy"></i> Copy</button>
+              <button class="btn btn-outline btn-sm" onclick="regenerateSignupCode()"><i class="fas fa-sync-alt"></i> Regenerate</button>
+            </div>
+          </div>
+        </div>
+        <div id="users-pending-section" style="display:none;">
+          <div class="card mb-4">
+            <div class="card-header"><span class="card-title">Pending Approval</span></div>
+            <div class="card-body" id="users-pending-list"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Team Members</span></div>
+          <div class="card-body" id="users-list"></div>
+        </div>
+      </div

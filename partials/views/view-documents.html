@@ -1,0 +1,11 @@
+<div class="page-view" id="view-documents">
+        <div class="search-bar">
+          <div class="search-input-wrap"><i class="fas fa-search"></i><input class="search-input" id="doc-search" type="text" placeholder="Search documents…" oninput="renderDocuments()"/></div>
+          <select class="form-control" id="doc-filter-client" style="width:auto;" onchange="renderDocuments()"><option value="">All Clients</option></select>
+          <select class="form-control" id="doc-filter-type" style="width:auto;" onchange="renderDocuments()"><option value="">All Types</option><option value="pdf">PDF</option><option value="docx">DOCX</option><option value="xlsx">XLSX</option><option value="img">Images</option></select>
+        </div>
+        <div class="card">
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>File Name</th><th>Client</th><th>Category</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody id="documents-tbody"></tbody></table></div>
+          <div id="documents-empty" class="empty-state" style="display:none;"><i class="fas fa-folder-open"></i><div class="empty-state-title">No documents yet</div></div>
+        </div>
+      </div

@@ -1,0 +1,13 @@
+<div class="modal-backdrop" id="modal-new-cat">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div><div class="modal-title">New Case Category</div></div><button class="modal-close" onclick="closeModal('modal-new-cat')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;">
+        <div class="form-group"><label class="form-label">Category Name <span class="required">*</span></label><input class="form-control" id="nc-name" type="text" placeholder="e.g. Immigration"/></div>
+        <div class="form-group"><label class="form-label">Icon (Font Awesome class)</label><input class="form-control" id="nc-icon" type="text" placeholder="fas fa-globe"/></div>
+        <div class="form-group"><label class="form-label">Color</label><select class="form-control" id="nc-color"><option value="blue">Blue</option><option value="green">Green</option><option value="purple">Purple</option><option value="orange">Orange</option><option value="red">Red</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-cat')">Cancel</button><button class="btn btn-gold" onclick="createCategory()"><i class="fas fa-plus"></i> Create</button></div>
+  </div>
+</div
