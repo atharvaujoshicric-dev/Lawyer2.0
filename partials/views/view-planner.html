@@ -1,0 +1,43 @@
+<div class="page-view" id="view-planner">
+        <div class="cal-layout">
+          <!-- Left: monthly calendar -->
+          <div class="cal-grid-wrap">
+            <div class="cal-nav">
+              <button class="btn btn-outline btn-icon" onclick="shiftPlannerMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+              <span id="planner-month-label" class="cal-nav-title"></span>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-outline btn-sm" onclick="goToToday()">Today</button>
+                <button class="btn btn-outline btn-icon" onclick="shiftPlannerMonth(1)"><i class="fas fa-chevron-right"></i></button>
+              </div>
+            </div>
+            <div class="cal-day-labels">
+              <div class="cal-day-label">Sun</div><div class="cal-day-label">Mon</div>
+              <div class="cal-day-label">Tue</div><div class="cal-day-label">Wed</div>
+              <div class="cal-day-label">Thu</div><div class="cal-day-label">Fri</div>
+              <div class="cal-day-label">Sat</div>
+            </div>
+            <div id="planner-cal-grid"></div>
+            <div style="display:flex;gap:14px;padding:10px 14px;border-top:1px solid var(--border-light);font-size:11.5px;color:var(--text-muted);flex-wrap:wrap;">
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f56565;margin-right:4px;"></span>Deadline/Overdue</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#805ad5;margin-right:4px;"></span>Task due</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4299e1;margin-right:4px;"></span>Hearing</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:4px;"></span>Event/Note</span>
+            </div>
+          </div>
+          <!-- Right: selected day detail -->
+          <div class="cal-detail-panel" id="planner-day-detail">
+            <div class="cal-detail-date" id="planner-day-label">Select a day</div>
+            <div id="planner-day-panel"></div>
+            <div id="cal-add-wrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);">
+              <div class="cal-detail-section">Add Note / Event</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+                <input class="form-control" id="cal-note-time" type="text" placeholder="Time (e.g. 10:00 AM)" style="font-size:12.5px;"/>
+                <div style="display:flex;gap:6px;">
+                  <input class="form-control" id="cal-note-input" type="text" placeholder="Note or event description…" onkeydown="if(event.key==='Enter')calAddNote()" style="font-size:12.5px;flex:1;"/>
+                  <button class="btn btn-gold btn-sm" onclick="calAddNote()"><i class="fas fa-plus"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div

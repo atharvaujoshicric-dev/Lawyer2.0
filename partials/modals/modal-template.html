@@ -1,0 +1,30 @@
+<div class="modal-backdrop" id="modal-template">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="tpl-modal-title">New Draft Template</div><div class="modal-sub">Use <code>{{CLIENT_NAME}}</code>, <code>{{CLIENT_ID}}</code>, <code>{{DATE}}</code>, <code>{{CASE_TYPE}}</code></div></div>
+      <button class="modal-close" onclick="closeModal('modal-template')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;margin-bottom:14px;">
+        <div class="form-group"><label class="form-label">Template Name <span class="required">*</span></label><input class="form-control" id="tpl-name" type="text" placeholder="e.g. NDA Draft"/></div>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="tpl-category"></select></div>
+      </div>
+      <div class="form-group" style="margin-bottom:6px;"><label class="form-label">Content <span class="required">*</span></label></div>
+      <div class="rich-toolbar">
+        <button onclick="richCmd('bold')"><i class="fas fa-bold"></i></button>
+        <button onclick="richCmd('italic')"><i class="fas fa-italic"></i></button>
+        <button onclick="richCmd('underline')"><i class="fas fa-underline"></i></button>
+        <button onclick="richCmd('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+        <button onclick="richCmd('insertOrderedList')"><i class="fas fa-list-ol"></i></button>
+        <button onclick="insertPlaceholder('{{CLIENT_NAME}}')" style="width:auto;padding:0 8px;font-size:11px;">{{NAME}}</button>
+        <button onclick="insertPlaceholder('{{DATE}}')" style="width:auto;padding:0 8px;font-size:11px;">{{DATE}}</button>
+        <button onclick="insertPlaceholder('{{CLIENT_ID}}')" style="width:auto;padding:0 8px;font-size:11px;">{{ID}}</button>
+      </div>
+      <div class="rich-editor" id="tpl-content" contenteditable="true"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-template')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveTemplate()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div

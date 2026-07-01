@@ -1,0 +1,21 @@
+<div class="modal-backdrop" id="modal-group-settings">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div><div class="modal-title">Group Settings</div></div><button class="modal-close" onclick="closeModal('modal-group-settings')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Group Name</label>
+        <div style="display:flex;gap:8px;"><input class="form-control" id="gs-name" type="text"/><button class="btn btn-outline btn-sm" onclick="saveGroupName()"><i class="fas fa-save"></i></button></div>
+      </div>
+      <div class="section-divider">Members</div>
+      <div id="gs-members" style="max-height:200px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;">
+        <select class="form-control" id="gs-add-member"></select>
+        <button class="btn btn-gold btn-sm" onclick="addGroupMember()"><i class="fas fa-plus"></i> Add</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteGroup()" title="Delete group permanently"><i class="fas fa-trash"></i> Delete Group</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-group-settings')">Done</button>
+    </div>
+  </div>
+</div

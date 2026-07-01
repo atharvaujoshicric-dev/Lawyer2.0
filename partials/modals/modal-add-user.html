@@ -1,0 +1,35 @@
+<div class="modal-backdrop" id="modal-add-user">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="au-title">Assign Role</div>
+      <div class="modal-sub">Set the team member's base role and custom permission level</div></div>
+      <button class="modal-close" onclick="closeModal('modal-add-user')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="gap:13px;">
+        <div class="form-group"><label class="form-label">Name</label><input class="form-control" id="au-name" type="text" disabled/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="au-email" type="email" disabled/></div>
+        <div class="form-group">
+          <label class="form-label">Base Role</label>
+          <select class="form-control" id="au-role">
+            <option value="assistant">Team Member (Non-Admin)</option>
+            <option value="admin">Admin / Senior Advocate (Full Access)</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Admin gets full access regardless of custom role below.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Custom Role / Hierarchy Position</label>
+          <select class="form-control" id="au-custom-role">
+            <option value="">— No custom role assigned —</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">Custom roles define specific permissions (view clients, finances, etc.). Create roles in <strong>Admin → Roles</strong>.</div>
+        </div>
+        <div class="form-group"><label class="form-label">Bar Registration No.</label><input class="form-control" id="au-bar" type="text"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-user')">Cancel</button>
+      <button class="btn btn-gold" onclick="approveUser()"><i class="fas fa-check"></i> Approve & Save</button>
+    </div>
+  </div>
+</div

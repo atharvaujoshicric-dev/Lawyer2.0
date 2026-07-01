@@ -1,0 +1,27 @@
+<div class="modal-backdrop" id="modal-portal-link">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header"><div><div class="modal-title">Client Portal Link</div><div class="modal-sub">Share the link and PIN separately for security</div></div><button class="modal-close" onclick="closeModal('modal-portal-link')">&times;</button></div>
+    <div class="modal-body">
+      <div style="background:var(--warning-bg);border:1px solid #fbd38d;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;">
+        <i class="fas fa-shield-alt" style="color:#d69e2e;margin-right:6px;"></i>
+        <strong>Important:</strong> Send the link and PIN through <em>separate</em> channels (e.g. link via email, PIN via SMS) for security.
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Portal Link (send this to the client)</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-control" id="portal-link-url" type="text" readonly style="font-size:12px;"/>
+          <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('portal-link-url').value).then(()=>showToast('Link copied!','success'))"><i class="fas fa-copy"></i></button>
+        </div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--navy);border-radius:10px;color:var(--gold);">
+        <div style="font-size:12px;opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Client PIN (share separately)</div>
+        <div id="portal-link-pin" style="font-size:36px;font-weight:700;letter-spacing:12px;"></div>
+        <div style="font-size:11px;opacity:.5;margin-top:6px;">Valid for 90 days</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-portal-link')">Close</button>
+      <button class="btn btn-gold" onclick="copyPortalLink()"><i class="fas fa-copy"></i> Copy Both</button>
+    </div>
+  </div>
+</div
