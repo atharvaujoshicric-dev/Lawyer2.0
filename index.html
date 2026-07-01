@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="description" content="LexDesk — Enterprise Legal Practice Management"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<title>LexDesk – Legal Practice Manager</title>
+
+<!-- Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+<!-- App Styles -->
+<link rel="stylesheet" href="app/css/app.css"/>
+
+<!-- Apply saved theme BEFORE render to prevent flash -->
+<script>
+  (function(){
+    try {
+      var cfg = JSON.parse(localStorage.getItem('ld_theme_config') || '{}');
+      if (cfg.mode === 'light') document.documentElement.setAttribute('data-theme','light');
+    } catch(e){}
+  })();
+</script>
+
+<!-- External libraries -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- Liquid Glass animated orb background -->
+<div class="lexdesk-orbs" aria-hidden="true">
+  <span></span><span></span><span></span><span></span>
+</div>
+
+<!-- ══ SETUP SCREEN (first-time Supabase config — normally hidden) ══ -->
+<div id="setup-screen" style="display:none;">
+  <div class="setup-card">
+    <div class="setup-logo">Lex<span>Desk</span></div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Override Supabase connection (optional — default credentials are pre-configured)</p>
+    <div id="setup-config-step">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Supabase Project URL</label>
+        <input class="form-control" id="cfg-url" type="text" placeholder="https://xxxx.supabase.co"/>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Supabase Anon Key</label>
+        <input class="form-control" id="cfg-key" type="text" placeholder="eyJhbGciOi..."/>
+      </div>
+      <button class="btn btn-primary w-full" style="justify-content:center;" onclick="saveSupabaseConfig()">
+        Connect <i class="fas fa-arrow-right" style="margin-left:6px;"></i>
+      </button>
+      <button class="btn btn-outline w-full mt-2" style="justify-content:center;" onclick="document.getElementById('setup-screen').style.display='none';document.getElementById('login-screen').style.display='flex';">
+        Use Default Credentials
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOGIN / SIGNUP ══ -->
+<div id="login-screen" style="display:none;">
+  <div class="login-card">
+    <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--gold);margin-bottom:4px;">LexDesk</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;letter-spacing:1px;">LEGAL PRACTICE MANAGEMENT</div>
+
+    <div id="auth-tabs" style="display:flex;gap:6px;margin-bottom:18px;">
+      <button class="btn btn-sm" id="tab-signin"
+        style="flex:1;justify-content:center;background:var(--gold);color:#0d0d0d;font-weight:600;"
+        onclick="showAuthTab('signin')">Sign In</button>
+      <button class="btn btn-sm btn-outline" id="tab-signup"
+        style="flex:1;justify-content:center;"
+        onclick="showAuthTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Sign In -->
+    <div id="auth-signin">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Email</label>
+        <input class="form-control" id="li-email" type="email" placeholder="you@lawfirm.com"
+          onkeydown="if(event.key==='Enter')document.getElementById('li-pwd').focus()"/>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Password</label>
+        <input class="form-control" id="li-pwd" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter')doSignIn()"/>
+      </div>
+      <div id="li-err" class="form-error" style="display:none;margin-bottom:12px;"></div>
+      <button class="btn btn-gold w-full" style="justify-content:center;font-size:15px;padding:12px;" onclick="doSignIn()">
+        <i class="fas fa-sign-in-alt" style="margin-right:8px;"></i>Sign In
+      </button>
+      <div style="text-align:center;margin-top:14px;">
+        <a href="#" onclick="showAuthTab('forgot');return false;"
+          style="font-size:12px;color:var(--text-muted);text-decoration:none;">Forgot password?</a>
+      </div>
+    </div>
+
+    <!-- Sign Up -->
+    <div id="auth-signup" style="display:none;">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">Full Name</label>
+        <input class="form-control" id="su-name" type="text" placeholder="Your full name"/>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">Email</label>
+        <input class="form-control" id="su-email" type="email" placeholder="you@lawfirm.com"/>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">Password</label>
+        <input class="form-control" id="su-pwd" type="password" placeholder="Min 8 characters"/>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Invite Code <span style="color:var(--text-muted);font-weight:400;">(if you have one)</span></label>
+        <input class="form-control" id="su-code" type="text" placeholder="e.g. XK9P2M" style="text-transform:uppercase;"/>
+      </div>
+      <div id="su-err" class="form-error" style="display:none;margin-bottom:12px;"></div>
+      <button class="btn btn-gold w-full" style="justify-content:center;font-size:15px;padding:12px;" onclick="doSignUp()">
+        Create Account
+      </button>
+    </div>
+
+    <!-- Forgot Password -->
+    <div id="auth-forgot" style="display:none;">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Enter your email and we'll send a reset link.</p>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Email</label>
+        <input class="form-control" id="reset-email" type="email" placeholder="you@lawfirm.com"
+          onkeydown="if(event.key==='Enter')doForgotPassword()"/>
+      </div>
+      <div id="reset-err" class="form-error" style="display:none;margin-bottom:12px;"></div>
+      <button class="btn btn-gold w-full" style="justify-content:center;font-size:15px;padding:12px;" onclick="doForgotPassword()">
+        Send Reset Link
+      </button>
+      <div style="text-align:center;margin-top:14px;">
+        <a href="#" onclick="showAuthTab('signin');return false;"
+          style="font-size:12px;color:var(--text-muted);text-decoration:none;">← Back to Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PENDING APPROVAL ══ -->
+<div id="pending-screen" style="display:none;position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;">
+  <div class="login-card" style="text-align:center;">
+    <i class="fas fa-clock" style="font-size:40px;color:var(--gold);margin-bottom:16px;"></i>
+    <h2 style="font-family:'Playfair Display',serif;color:var(--text-primary);margin-bottom:10px;">Awaiting Approval</h2>
+    <p style="color:var(--text-muted);font-size:13px;line-height:1.6;">
+      Your account has been created. The Senior Advocate needs to approve your access.<br/>
+      You'll be able to sign in once approved.
+    </p>
+    <button class="btn btn-outline mt-4" onclick="doLogout()" style="justify-content:center;">Sign Out</button>
+  </div>
+</div>
+
+<!-- ══ CLIENT PORTAL LOGIN ══ -->
+<div id="portal-screen" style="display:none;position:fixed;inset:0;z-index:500;background:linear-gradient(135deg,#0a1628,#0d2040);align-items:center;justify-content:center;">
+  <div class="login-card" style="max-width:380px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);">Client Portal</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Enter your access details</div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Access PIN</label>
+      <input class="form-control" id="portal-pin" type="password" maxlength="4" placeholder="4-digit PIN"
+        onkeydown="if(event.key==='Enter')portalLogin()"/>
+    </div>
+    <div id="portal-err" class="form-error" style="display:none;margin-bottom:12px;"></div>
+    <button class="btn btn-gold w-full" style="justify-content:center;" onclick="portalLogin()">
+      <i class="fas fa-unlock" style="margin-right:8px;"></i>Access Case
+    </button>
+  </div>
+</div>
+
+<!-- ══ CLIENT PORTAL VIEW ══ -->
+<div id="portal-view" style="display:none;position:fixed;inset:0;z-index:400;background:#06091A;overflow-y:auto;padding:24px;">
+  <div id="portal-content" style="max-width:700px;margin:0 auto;"></div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="app" style="display:none;">
+
+  <!-- Mobile sidebar toggle -->
+  <button id="sidebar-toggle" onclick="toggleSidebar()" style="display:none;">
+    <i class="fas fa-bars"></i>
+  </button>
+  <div id="sidebar-overlay" onclick="toggleSidebar()" style="display:none;"></div>
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">LexDesk</div>
+      <div class="logo-sub">Legal Practice CRM</div>
+    </div>
+    <div class="sidebar-nav" id="sidebar-nav">
+      <!-- Built by buildSidebar() -->
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar av-navy" id="sidebar-user-avatar">U</div>
+        <div style="flex:1;min-width:0;">
+          <div class="user-name" id="sidebar-user-name">Loading…</div>
+          <div class="user-role" id="sidebar-user-role"></div>
+        </div>
+      </div>
+      <button class="sidebar-logout" onclick="doLogout()">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <div id="main">
+    <!-- Topbar -->
+    <header id="topbar">
+      <button id="sidebar-toggle-top" onclick="toggleSidebar()"
+        style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;display:none;">
+        <i class="fas fa-bars"></i>
+      </button>
+      <span class="topbar-title" id="topbar-title">Dashboard</span>
+      <div class="topbar-actions" id="topbar-actions">
+        <div class="sync-badge" id="sync-badge">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="sync-text">Connecting…</span>
+        </div>
+        <button class="btn btn-gold btn-sm" id="topbar-new-client-btn"
+          onclick="openModal('modal-new-client')" style="display:none;">
+          <i class="fas fa-plus"></i> New Client
+        </button>
+      </div>
+    </header>
+
+    <!-- Page views container -->
+    <main id="page">
+
+      <!-- Dashboard -->
+      <div class="page-view active" id="view-dashboard">
+        <div id="dash-welcome" style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text-primary);margin-bottom:20px;"></div>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div id="dash-alerts" style="margin-top:16px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;" id="dash-grid">
+          <div class="card"><div class="card-header"><div class="card-title">Recent Cases</div></div><div class="card-body" id="dash-recent-clients"></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">My Open Tasks</div></div><div class="card-body" id="dash-my-tasks"></div></div>
+        </div>
+      </div>
+
+      <!-- Clients / Cases -->
+      <div class="page-view" id="view-clients">
+        <div id="clients-toolbar" class="topbar-actions" style="margin-bottom:16px;flex-wrap:wrap;gap:8px;"></div>
+        <div id="client-list-view">
+          <div class="card">
+            <div class="card-header" id="clients-header"></div>
+            <div class="card-body" style="padding:0;overflow-x:auto;">
+              <table class="data-table" id="client-table">
+                <thead id="client-table-head"></thead>
+                <tbody id="client-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="client-detail-view" style="display:none;"></div>
+      </div>
+
+      <!-- Tasks -->
+      <div class="page-view" id="view-tasks">
+        <div id="task-controls" style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"></div>
+        <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;align-items:start;"></div>
+      </div>
+
+      <!-- Chat -->
+      <div class="page-view" id="view-chat">
+        <div class="chat-layout card" style="height:calc(100vh - 120px);overflow:hidden;">
+          <div class="chat-sidebar" id="chat-contact-list" style="overflow-y:auto;"></div>
+          <div class="chat-main" style="display:flex;flex-direction:column;flex:1;min-width:0;">
+            <div class="chat-header" id="chat-header">
+              <span id="chat-header-title" style="font-weight:600;color:var(--text-primary);">Team Channel</span>
+              <button id="chat-manage-group-btn" style="display:none;" class="btn btn-outline btn-sm" onclick="openManageGroupModal()">
+                <i class="fas fa-cog"></i> Manage
+              </button>
+            </div>
+            <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+            <div class="chat-input-bar">
+              <input id="chat-text-input" class="form-control" type="text" placeholder="Type a message…"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){sendChatMessage();return false;}"/>
+              <button class="btn btn-gold btn-sm" onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="page-view" id="view-notes">
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn btn-gold btn-sm" onclick="openNoteEditor()"><i class="fas fa-plus"></i> New Note</button>
+        </div>
+        <div id="notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
+        <div id="note-detail-panel" style="display:none;"></div>
+      </div>
+
+      <!-- Finances -->
+      <div class="page-view" id="view-finances">
+        <div class="stats-grid" id="fin-summary-cards" style="margin-bottom:20px;"></div>
+        <div class="card"><div class="card-header"><div class="card-title">Fee Ledger</div></div><div class="card-body" style="padding:0;" id="fin-client-list"></div></div>
+      </div>
+
+      <!-- Templates -->
+      <div class="page-view" id="view-templates">
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <button class="btn btn-gold btn-sm" onclick="openTemplateModal()"><i class="fas fa-plus"></i> New Template</button>
+        </div>
+        <div id="template-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
+      </div>
+
+      <!-- Planner -->
+      <div class="page-view" id="view-planner">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;">
+          <div id="planner-cal-wrap" class="card" style="min-width:280px;max-width:320px;"></div>
+          <div class="card"><div class="card-header" id="planner-detail-head"></div><div class="card-body" id="planner-detail-body"></div></div>
+        </div>
+      </div>
+
+      <!-- Deadline Rules -->
+      <div class="page-view" id="view-deadline-rules">
+        <div style="display:flex;gap:10px;margin-bottom:16px;" id="deadline-toolbar"></div>
+        <div class="card"><div class="card-header"><div class="card-title">Statute Deadline Rules</div></div><div class="card-body" style="padding:0;" id="deadline-rules-list"></div></div>
+      </div>
+
+      <!-- Documents -->
+      <div class="page-view" id="view-documents">
+        <div class="card"><div class="card-header"><div class="card-title">Documents</div></div><div class="card-body" id="docs-view-body">Select a client to view their documents.</div></div>
+      </div>
+
+      <!-- Activity Log -->
+      <div class="page-view" id="view-activity">
+        <div class="card"><div class="card-header"><div class="card-title">Activity Log</div></div><div class="card-body" style="padding:0;" id="activity-list"></div></div>
+      </div>
+
+      <!-- Users -->
+      <div class="page-view" id="view-users">
+        <div id="users-toolbar" style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;"></div>
+        <div class="card"><div class="card-header" id="users-header"></div><div class="card-body" style="padding:0;" id="users-list"></div></div>
+      </div>
+
+      <!-- Roles -->
+      <div class="page-view" id="view-roles">
+        <div class="card"><div class="card-header"><div class="card-title">Custom Roles</div><button class="btn btn-gold btn-sm" onclick="openRoleModal()"><i class="fas fa-plus"></i> New Role</button></div><div class="card-body" style="padding:0;" id="roles-list"></div></div>
+      </div>
+
+      <!-- Form Builder -->
+      <div class="page-view" id="view-formbuilder">
+        <div class="card"><div class="card-header"><div class="card-title">Case Form Builder</div></div><div class="card-body" id="formbuilder-body"></div></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="page-view" id="view-settings">
+        <div class="settings-wrap" id="settings-body"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══ MODALS (from original index.html — populated by JS) ══ -->
+<div id="modals-container"></div>
+
+<!-- Toast container -->
+<div id="toast-container" style="position:fixed;bottom:80px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+
+<!-- Toast CSS inline so it works before app.css loads -->
+<style>
+@keyframes toastIn  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes toastOut { from{opacity:1;transform:translateY(0)}   to{opacity:0;transform:translateY(12px)} }
+.form-error { color: var(--danger,#F87171); font-size:12.5px; padding:8px 12px; border-radius:8px; background:rgba(248,113,113,.10); border:1px solid rgba(248,113,113,.25); }
+</style>
+
+<!-- ══ JAVASCRIPT — load in dependency order ══ -->
+<!-- Boot helpers first (escHtml, showToast, etc.) -->
+<script src="app/js/23-boot.js"></script>
+
+<!-- Theme (apply before UI renders) -->
+<script src="app/js/22-themes.js"></script>
+
+<!-- Config, auth, Supabase client -->
+<script src="app/js/01-config-auth.js"></script>
+
+<!-- Core init, data loading, navigation -->
+<script src="app/js/02-init-data.js"></script>
+
+<!-- Feature modules -->
+<script src="app/js/03-clients.js"></script>
+<script src="app/js/04-client-table.js"></script>
+<script src="app/js/05-chat.js"></script>
+<script src="app/js/06-tasks.js"></script>
+<script src="app/js/07-templates-settings.js"></script>
+<script src="app/js/08-payments.js"></script>
+<script src="app/js/09-planner.js"></script>
+<script src="app/js/10-onedrive.js"></script>
+<script src="app/js/11-notifications.js"></script>
+<script src="app/js/12-notes.js"></script>
+<script src="app/js/13-finances.js"></script>
+<script src="app/js/14-portal.js"></script>
+<script src="app/js/15-invoice.js"></script>
+<script src="app/js/16-deadlines.js"></script>
+<script src="app/js/17-features.js"></script>
+<script src="app/js/18-roles.js"></script>
+<script src="app/js/19-groups-chat.js"></script>
+<script src="app/js/20-misc.js"></script>
+<script src="app/js/21-chatbot.js"></script>
+
+<!-- Modal HTML — inject into DOM -->
+<script src="app/js/modals-loader.js"></script>
+
+<!-- Boot: init Supabase + check auth session -->
+<script>
+  // Initialise Supabase with hardcoded credentials (no setup screen needed)
+  initSupabase();
+
+  // Check for existing session on page load
+  window.addEventListener('DOMContentLoaded', async function() {
+    // Apply theme immediately
+    if (typeof initTheme === 'function') initTheme();
+
+    // Check for portal mode (?portal=TOKEN in URL)
+    if (typeof checkPortalMode === 'function') {
+      const isPortal = checkPortalMode();
+      if (isPortal) return;
+    }
+
+    // Check for password reset token
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      document.getElementById('login-screen').style.display = 'flex';
+      // Show password change UI
+      if (typeof showAuthTab === 'function') showAuthTab('signin');
+      return;
+    }
+
+    // Try to restore existing session
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await afterAuth();
+    } else {
+      // No session — show login
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+  });
+</script>
+
+</body>
+</html>
