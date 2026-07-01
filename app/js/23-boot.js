@@ -56,10 +56,10 @@ window.addEventListener('DOMContentLoaded',async ()=>{
     return;
   }
   captureOneDriveRedirectToken(); // must run before anything else touches the URL hash
-  if(!initSupabase())return;
+  initSupabase();
   const {data:{session}}=await sb.auth.getSession();
   if(session){ await afterAuth(); }
-  else { document.getElementById('login-screen').style.display='flex'; }
+  else { document.getElementById('login-screen').style.display='flex'; if(window.__blankGuard){clearTimeout(window.__blankGuard);} }
 
   sb.auth.onAuthStateChange((event)=>{
     if(event==='SIGNED_OUT'){

@@ -4,7 +4,15 @@
 // ════════════════════════════════════════════
 
 // ── Forgot / Change password ──────────────────────────────────────────────
-
+async function doForgotPassword(){
+  const email=(document.getElementById('forgot-email')?.value||'').trim();
+  if(!email){showToast('Enter your email address.','error');return;}
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:window.location.href.split('#')[0]+'#reset'
+  });
+  if(error){showToast('Could not send reset email: '+error.message,'error');return;}
+  showToast('Reset link sent! Check your inbox.','success');
+}
 
 async function checkPasswordResetMode(){
   const hash=window.location.hash;
